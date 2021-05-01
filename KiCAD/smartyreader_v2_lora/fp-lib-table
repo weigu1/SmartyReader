@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name smartyreader_ng_lora)(type KiCad)(uri ${KIPRJMOD}/smartyreader_ng_lora.pretty)(options "")(descr ""))
+)
