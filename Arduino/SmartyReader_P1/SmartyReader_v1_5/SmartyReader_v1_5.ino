@@ -108,8 +108,8 @@ const long PUBLISH_TIME = 20000;
 #include <time.h>
 
 // WiFi and network settings
-const char *WIFI_SSID = "opossum";       // SSID
-const char *WIFI_PASSWORD = "WUdWz513818@?";   // password
+const char *WIFI_SSID = "";       // SSID
+const char *WIFI_PASSWORD = "";   // password
 const char *NET_MDNSNAME = "SmartyReader2";      // optional (access with mdnsname.local)
 const char *NET_HOSTNAME = "SmartyReader2";      // optional
 
