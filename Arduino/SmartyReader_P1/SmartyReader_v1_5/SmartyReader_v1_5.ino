@@ -14,6 +14,7 @@
                   all data (json or string)
   V1.4 2020-06-24 enable line no more switched (10s data)
   V1.5 2021-04-26 for new boards V2.0 (PCB) without transistor
+                  old hardware supported
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
 
@@ -90,10 +91,14 @@
 const long PUBLISH_TIME = 20000;
 
 // Comment or uncomment the following lines suiting your needs
+#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTSECURE    // if you want a secure connection over MQTT (recommended!!)
 //#define STATIC        // if static IP needed (no DHCP)
 //#define ETHERNET      // if Ethernet with Funduino (W5100) instead of WiFi
-#define OTA           // if Over The Air update needed (security risk!)
+#define OTA             // if Over The Air update needed (security risk!)
+// power and energy are published as JSON string, for more data uncomment the following line
+// subscribe to topic/# (e.g. lamsmarty/#)
+//#define PUBLISH_ALL 0   // all the data is published 0 for normal string, 1 for json
 
 #include "ESPBacker.h"  // ESP helper lib (more on weigu.lu)
 #include <PubSubClient.h>
@@ -103,9 +108,9 @@ const long PUBLISH_TIME = 20000;
 #include <time.h>
 
 // WiFi and network settings
-const char *WIFI_SSID = "";                 // SSID
-const char *WIFI_PASSWORD = "";   // password
-const char *NET_MDNSNAME = "SmartyReader2";      // optional (access with myESP.local)
+const char *WIFI_SSID = "opossum";       // SSID
+const char *WIFI_PASSWORD = "WUdWz513818@?";   // password
+const char *NET_MDNSNAME = "SmartyReader2";      // optional (access with mdnsname.local)
 const char *NET_HOSTNAME = "SmartyReader2";      // optional
 
 //Key for SAG1030700089067
@@ -152,8 +157,8 @@ String MQTT_TOPIC = "lamsmarty";
 ESPBacker B;
 PubSubClient mqttClient(espClient);
 
-// needed to adjust the buffers (without gas about 700 bytes (take 1024))
-const uint16_t MAX_SERIAL_STREAM_LENGTH = 1200;
+// needed to adjust the buffers new data streams > 1024
+const uint16_t MAX_SERIAL_STREAM_LENGTH = 1500;
 byte telegram[MAX_SERIAL_STREAM_LENGTH];
 char buffer[MAX_SERIAL_STREAM_LENGTH-30];
 
@@ -162,6 +167,14 @@ char msg[128], filename[13];
 byte return_value;
 uint16_t serial_data_length = 0;
 const byte LINE_LENGTH_RAW_SERIAL = 30;
+
+#ifdef OLD_HARDWARE
+  #ifdef ESP8266
+    const byte DATA_REQUEST_SM = D3; //active Low! D3 for LOLIN/WEMOS D1 mini pro
+  #else
+    const byte DATA_REQUEST_SM = 17; //active Low! 17  for MH ET LIVE ESP32MiniKit
+  #endif // #ifdef ESP8266
+#endif
 
 // Crypto and Smarty variables
 struct Vector_GCM {
@@ -319,11 +332,21 @@ void mqtt_connect() {
 
 // open serial connection to smartmeter on Serial0
 void init_serial4smarty() {
-  #ifdef ESP8266   // true inverts signal
-      Serial.begin(115200, SERIAL_8N1, SERIAL_FULL, 1, true);
+  #ifdef OLD_HARDWARE
+    pinMode(DATA_REQUEST_SM, OUTPUT);
+    delay(100);
+    #ifdef ESP8266   // true inverts signal
+      Serial.begin(115200);
+    #else
+      Serial.begin(115200,SERIAL_8N1, 1, 3); // change reversed pins of ESP32
+    #endif
   #else
-    Serial.begin(115200,SERIAL_8N1, 1, 3, true); // change reversed pins of ESP32
-  #endif //ESP32MK
+    #ifdef ESP8266   // true inverts signal
+      Serial.begin(115200, SERIAL_8N1, SERIAL_FULL, 1, true);
+    #else
+      Serial.begin(115200,SERIAL_8N1, 1, 3, true); // change reversed pins of ESP32
+    #endif
+  #endif    
   Serial.setRxBufferSize(MAX_SERIAL_STREAM_LENGTH);
 }
 /********** MQTT functions **************************************************/
@@ -425,9 +448,19 @@ void mqtt_publish_all(boolean json) {
 
 uint16_t read_telegram() {
   uint16_t serial_cnt = 0;
-  if (Serial.available()) {delay(200);}  // get it all
+  #ifdef OLD_HARDWARE
+    digitalWrite(DATA_REQUEST_SM,LOW);   // set request line to 5V    
+  #endif
+  if (Serial.available()) {delay(500);}  // wait for the whole stream
+  #ifdef OLD_HARDWARE
+    digitalWrite(DATA_REQUEST_SM,HIGH);  // x*86,8µs (1024 byte need 88ms)
+  #endif  
   while ((Serial.available()) && (serial_cnt < MAX_SERIAL_STREAM_LENGTH)) {
     telegram[serial_cnt] = Serial.read();
+    if (telegram[0] != 0xDB) {
+      while (Serial.available() > 0) {Serial.read();} //clear the buffer!    
+      break;
+    }
     serial_cnt++;
   }
   return (serial_cnt);
@@ -442,8 +475,11 @@ void decrypt_and_publish() {
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
     parse_dsmr_string(buffer);
-    //mqtt_publish_all(1); // 0 for simple string, 1 for json cooked
-    mqtt_publish_energy_and_power();
+    #ifdef PUBLISH_ALL
+      mqtt_publish_all(PUBLISH_ALL); // 0 for simple string, 1 for json cooked
+    #else
+      mqtt_publish_energy_and_power();
+    #endif  
     B.blink_led_x_times(4);
   }
   else {    //max datalength reached error!
