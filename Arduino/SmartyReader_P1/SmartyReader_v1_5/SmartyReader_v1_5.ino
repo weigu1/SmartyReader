@@ -91,7 +91,7 @@
 const long PUBLISH_TIME = 20000;
 
 // Comment or uncomment the following lines suiting your needs
-#define OLD_HARDWARE    // for the boards before V2.0
+//#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTSECURE    // if you want a secure connection over MQTT (recommended!!)
 //#define STATIC        // if static IP needed (no DHCP)
 //#define ETHERNET      // if Ethernet with Funduino (W5100) instead of WiFi
@@ -110,22 +110,24 @@ const long PUBLISH_TIME = 20000;
 // WiFi and network settings
 const char *WIFI_SSID = "";       // SSID
 const char *WIFI_PASSWORD = "";   // password
-const char *NET_MDNSNAME = "SmartyReader2";      // optional (access with mdnsname.local)
-const char *NET_HOSTNAME = "SmartyReader2";      // optional
+const char *NET_MDNSNAME = "SmartyReader";      // optional (access with mdnsname.local)
+const char *NET_HOSTNAME = "SmartyReader";      // optional
 
-//Key for SAG1030700089067
+// Key for SAG1030700089067 (16 byte!)
 uint8_t KEY_SMARTY[] = {0xAE, 0xBD, 0x21, 0xB7, 0x69, 0xA6, 0xD1, 0x3C,
                         0x0D, 0xF0, 0x64, 0xE3, 0x83, 0x68, 0x2E, 0xFF};
-//uint8_t KEY_SMARTY[] = {0x74, 0x5E, 0x2D, 0x96, 0x6E, 0xA0, 0x95, 0xDD, // PV 3kW
-//                     0x10, 0x46, 0x24, 0xBD, 0x16, 0x6D, 0x6F, 0x2E};// 552
-
+// Auth data: hard coded in Lux but not in Austria :)  (17 byte!)
+uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
+                       0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
+                       0xFF};
+  
 #ifdef STATIC
   IPAddress NET_LOCAL_IP (192,168,1,181);    // 3x optional for static IP
   IPAddress NET_GATEWAY (192,168,1,20);
   IPAddress NET_MASK (255,255,255,0);
 #endif // ifdef STATIC*/
 #ifdef ETHERNET
-  byte NET_MAC[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; //only for ethernet
+  uint8_t NET_MAC[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; //only for ethernet
 #endif //#ifdef ETHERNET*/
 
 // UDP settings
@@ -159,31 +161,31 @@ PubSubClient mqttClient(espClient);
 
 // needed to adjust the buffers new data streams > 1024
 const uint16_t MAX_SERIAL_STREAM_LENGTH = 1500;
-byte telegram[MAX_SERIAL_STREAM_LENGTH];
+uint8_t telegram[MAX_SERIAL_STREAM_LENGTH];
 char buffer[MAX_SERIAL_STREAM_LENGTH-30];
 
 // other variables
 char msg[128], filename[13];
-byte return_value;
+uint8_t return_value;
 uint16_t serial_data_length = 0;
-const byte LINE_LENGTH_RAW_SERIAL = 30;
+const uint8_t LINE_LENGTH_RAW_SERIAL = 30;
 
 #ifdef OLD_HARDWARE
   #ifdef ESP8266
-    const byte DATA_REQUEST_SM = D3; //active Low! D3 for LOLIN/WEMOS D1 mini pro
+    const uint8_t DATA_REQUEST_SM = D3; //active Low! D3 for LOLIN/WEMOS D1 mini pro
   #else
-    const byte DATA_REQUEST_SM = 17; //active Low! 17  for MH ET LIVE ESP32MiniKit
+    const uint8_t DATA_REQUEST_SM = 17; //active Low! 17  for MH ET LIVE ESP32MiniKit
   #endif // #ifdef ESP8266
 #endif
 
 // Crypto and Smarty variables
 struct Vector_GCM {
   const char *name;
-  byte key[16];
-  byte ciphertext[MAX_SERIAL_STREAM_LENGTH];
-  byte authdata[17];
-  byte iv[12];
-  byte tag[16];
+  uint8_t key[16];
+  uint8_t ciphertext[MAX_SERIAL_STREAM_LENGTH];
+  uint8_t authdata[17];
+  uint8_t iv[12];
+  uint8_t tag[16];
   size_t authsize;
   size_t datasize;
   size_t tagsize;
@@ -410,7 +412,7 @@ void mqtt_publish_energy_and_power() {
 
 void mqtt_publish_all(boolean json) {
   String Sub_topic, Mqtt_msg = "";
-  byte i;
+  uint8_t i;
   for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
     if (dsmr[i].value != "") {
       if (json) {
@@ -453,7 +455,7 @@ uint16_t read_telegram() {
   #endif
   if (Serial.available()) {delay(500);}  // wait for the whole stream
   #ifdef OLD_HARDWARE
-    digitalWrite(DATA_REQUEST_SM,HIGH);  // x*86,8µs (1024 byte need 88ms)
+    digitalWrite(DATA_REQUEST_SM,HIGH);  // x*86,8µs (1024 uint8_t need 88ms)
   #endif  
   while ((Serial.available()) && (serial_cnt < MAX_SERIAL_STREAM_LENGTH)) {
     telegram[serial_cnt] = Serial.read();
@@ -470,7 +472,7 @@ void decrypt_and_publish() {
   B.log_ln("-----------------------------------");
   B.log("Get data from Smarty and publish");
   //print_raw_data(serial_data_length);  // for thorough debugging
-  init_vector(&Vector_SM,"Vector_SM",KEY_SMARTY);
+  init_vector(&Vector_SM,"Vector_SM", KEY_SMARTY, AUTH_DATA);
   //print_vector(&Vector_SM);            // for thorough debugging
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
@@ -488,8 +490,8 @@ void decrypt_and_publish() {
   }
 }
 
-void init_vector(Vector_GCM *vect, const char *Vect_name, byte *key_SM) {
-  vect->name = Vect_name;  // vector name
+void init_vector(Vector_GCM *vect, const char *Vect_name, uint8_t *key_SM, uint8_t *auth_data) {
+  vect->name = Vect_name;  // vector name    
   for (int i = 0; i < 16; i++) {
     vect->key[i] = key_SM[i];
   }
@@ -499,12 +501,9 @@ void init_vector(Vector_GCM *vect, const char *Vect_name, byte *key_SM) {
   }
   for (int i = 0; i < data_length; i++) {
     vect->ciphertext[i] = telegram[i+18];
-  }
-  byte AuthData[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-                        0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
-                        0xFF};
+  }  
   for (int i = 0; i < 17; i++) {
-     vect->authdata[i] = AuthData[i];
+     vect->authdata[i] = auth_data[i];
   }
   for (int i = 0; i < 8; i++) {
      vect->iv[i] = telegram[2+i];
@@ -527,40 +526,40 @@ void decrypt_text(Vector_GCM *vect) {
   gcmaes128 = new GCM<AES128>();
   gcmaes128->setKey(vect->key, gcmaes128->keySize());
   gcmaes128->setIV(vect->iv, vect->ivsize);
-  gcmaes128->decrypt((byte*)buffer, vect->ciphertext, vect->datasize);
+  gcmaes128->decrypt((uint8_t*)buffer, vect->ciphertext, vect->datasize);
   delete gcmaes128;
 }
 
 void parse_dsmr_string(String Dmsr) {
-  int field_index, byte_cnt, i, j;
+  int field_index, uint8_t_cnt, i, j;
   String Tmp;
   B.log_ln("+++++++++++++++++++++++++++++++++++++++");
   B.log_ln("DMSR:");
   B.log_ln(Dmsr);
   // get the identification
-  byte_cnt = Dmsr.indexOf('\n');
-  dsmr[0].value = Dmsr.substring(0,byte_cnt-1);
+  uint8_t_cnt = Dmsr.indexOf('\n');
+  dsmr[0].value = Dmsr.substring(0,uint8_t_cnt-1);
   B.log_ln("+++++++++++++++++++++++++++++++++++++++");
   B.log_ln(dsmr[0].value);
   // run through all the OBIS fields
   for (i = 1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
     field_index = Dmsr.indexOf(dsmr[i].id);  // get field_indexes of OBIS codes
     if (field_index != -1) { // -1 = not found
-      byte_cnt = field_index;
-      while (Dmsr[byte_cnt] != '(') { // go to '('
-        byte_cnt++;
+      uint8_t_cnt = field_index;
+      while (Dmsr[uint8_t_cnt] != '(') { // go to '('
+        uint8_t_cnt++;
       }
       if ((dsmr[i].id)=="0-1:24.2.1") { // Merci Serge
-        byte_cnt++; // get past '('
-        while (Dmsr[byte_cnt] != '(') { // go to '('
-          byte_cnt++;
+        uint8_t_cnt++; // get past '('
+        while (Dmsr[uint8_t_cnt] != '(') { // go to '('
+          uint8_t_cnt++;
         }
       }
       Tmp = "";
-      byte_cnt++; // get past '('
-      while (Dmsr[byte_cnt] != ')') { // get the String between brackets
-        Tmp.concat(Dmsr[byte_cnt]);
-        byte_cnt++;
+      uint8_t_cnt++; // get past '('
+      while (Dmsr[uint8_t_cnt] != ')') { // get the String between brackets
+        Tmp.concat(Dmsr[uint8_t_cnt]);
+        uint8_t_cnt++;
       }
       if ((dsmr[i].id)=="0-0:42.0.0") { // convert equipment id (coded in HEX)
         for (j = 0; j < Tmp.length()/2; j++) {
@@ -583,7 +582,7 @@ void parse_dsmr_string(String Dmsr) {
 /********** DEBUG functions ***************************************************/
 
 void print_raw_data(uint16_t serial_data_length) {
-  B.log("\n-----------------------------------\nRaw length in Byte: ");
+  B.log("\n-----------------------------------\nRaw length in uint8_t: ");
   B.log_ln(String(serial_data_length));
   B.log_ln("Raw data: ");
   int mul = (serial_data_length/LINE_LENGTH_RAW_SERIAL);
