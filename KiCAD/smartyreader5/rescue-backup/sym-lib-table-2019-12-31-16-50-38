@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name smartmeter_P1_board-rescue)(type Legacy)(uri ${KIPRJMOD}/smartmeter_P1_board-rescue.lib)(options "")(descr ""))
-)

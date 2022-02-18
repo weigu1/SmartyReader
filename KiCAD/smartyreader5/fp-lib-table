@@ -1,3 +1,0 @@
-(fp_lib_table
-  (lib (name smartyreader5)(type KiCad)(uri ${KIPRJMOD}/smartyreader5.pretty)(options "")(descr ""))
-)
