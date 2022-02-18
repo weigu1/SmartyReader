@@ -1,4 +1,4 @@
-19193985199134082
+19218283100186214
 Battery
 BatteryHolder_Bulgin_BX0036_1xC
 Bulgin Battery Holder, BX0036, Battery Type C (https://www.bulgin.com/products/pub/media/bulgin/data/Battery_holders.pdf)
@@ -83047,6 +83047,111 @@ Through hole pin header THT 2x20 2.54mm double row
 0
 86
 43
+smartyreader_ng_lora
+HOPERF_RFM9XW_SMD
+Low Power Long Range Transceiver Module SMD-16 (https://www.hoperf.com/data/upload/portal/20181127/5bfcbea20e9ef.pdf)
+LoRa Low Power Long Range Transceiver Module
+0
+16
+16
+smartyreader_ng_lora
+OSHW-Logo2_7.3x6mm_SilkScreen
+Open Source Hardware Symbol
+Logo Symbol OSHW
+0
+0
+0
+smartyreader_ng_lora
+OSHW-Logo2_9.8x8mm_SilkScreen
+Open Source Hardware Symbol
+Logo Symbol OSHW
+0
+0
+0
+smartyreader_ng_lora
+U.FL_Molex_MCRF_73412-0110_Vertical
+Molex Microcoaxial RF Connectors (MCRF), mates Hirose U.FL, (http://www.molex.com/pdm_docs/sd/734120110_sd.pdf)
+mcrf hirose ufl u.fl microcoaxial
+0
+4
+2
+smartyreader_ng_lora
+W0805
+Resistor SMD 0805, hand soldering
+resistor 0805
+0
+2
+2
+smartyreader_ng_lora
+WC1
+Condensateur e = 1 pas
+C
+0
+2
+2
+smartyreader_ng_lora
+WC1V
+Condensateur e = 1 pas
+C
+0
+2
+2
+smartyreader_ng_lora
+WPin_1mm
+module 1 pin (ou trou mecanique de percage)
+
+0
+1
+1
+smartyreader_ng_lora
+WPin_3mm
+module 1 pin (ou trou mecanique de percage)
+
+0
+1
+1
+smartyreader_ng_lora
+WR4
+Resitance 4 pas
+R
+0
+2
+2
+smartyreader_ng_lora
+WRJ12
+
+
+0
+8
+8
+smartyreader_ng_lora
+WSIL2_SL
+Connecteur 43pibs
+CONN DEV
+0
+2
+2
+smartyreader_ng_lora
+WSIL4_SL
+Connecteur 4 pibs
+CONN DEV
+0
+4
+4
+smartyreader_ng_lora
+WW5100
+Double rangee de contacts 2 x 5 pins
+CONN
+0
+10
+10
+smartyreader_ng_lora
+WWEMOSD1
+Connecteur 12 pins
+CONN DEV
+0
+16
+16
 weigu
 DCDC-Conv_Recom_R-78HBxx-0.5
 Recom R-78HBxx.0.5

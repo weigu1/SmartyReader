@@ -5,8 +5,8 @@ $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 1
 Title "smartyreader_ng_lora (P1)"
-Date "2021-01-28"
-Rev "v_1.2"
+Date "2021-05-22"
+Rev "v_2.1"
 Comp "weigu.lu"
 Comment1 ""
 Comment2 ""
@@ -123,7 +123,6 @@ F 3 "" H 9100 2150 60  0000 C CNN
 $EndComp
 Text Notes 8700 2950 0    60   ~ 0
 ETHERNET\nFunduino W5100
-NoConn ~ 6450 2500
 Wire Wire Line
 	9300 2050 9400 2050
 Wire Wire Line
@@ -310,8 +309,8 @@ $Comp
 L weigu:RFM95W-868S2 U1
 U 1 1 601BAB1D
 P 7550 2100
-F 0 "U1" H 7800 1400 50  0000 C CNN
-F 1 "RFM95W" H 7850 1500 50  0000 C CNN
+F 0 "U1" H 7250 1550 50  0000 C CNN
+F 1 "RFM95W" H 7750 2550 50  0000 C CNN
 F 2 "RF_Module:HOPERF_RFM9XW_SMD" H 4250 3750 50  0001 C CNN
 F 3 "https://www.hoperf.com/data/upload/portal/20181127/5bfcbea20e9ef.pdf" H 4250 3750 50  0001 C CNN
 	1    7550 2100
@@ -405,13 +404,13 @@ Wire Wire Line
 	6700 2000 7050 2000
 Connection ~ 6700 2100
 Wire Wire Line
-	8350 2500 8350 3000
+	8500 2500 8500 3000
 Wire Wire Line
-	8350 3000 6700 3000
+	8500 3000 6700 3000
 Wire Wire Line
 	6700 2100 6700 3000
 Wire Wire Line
-	8350 2500 8650 2500
+	8500 2500 8650 2500
 Wire Wire Line
 	6600 2200 6600 1800
 Wire Wire Line
@@ -432,57 +431,30 @@ F 3 "~" H 6900 3900 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	8400 3050 8400 2350
+	8550 3050 8550 2350
 Wire Wire Line
-	8400 2350 8650 2350
+	8550 2350 8650 2350
 Wire Wire Line
 	6450 2300 6900 2300
 Wire Wire Line
-	8050 2500 8050 3100
+	8050 2500 8050 2550
 Wire Wire Line
 	8050 3100 6550 3100
 Wire Wire Line
 	6550 3100 6550 1900
 Connection ~ 6550 1900
 Wire Wire Line
-	8050 2400 8100 2400
-Wire Wire Line
-	6300 2900 6300 2850
-Wire Wire Line
-	6300 2850 5250 2850
-Wire Wire Line
-	5250 2850 5250 2100
-Wire Wire Line
-	5250 2100 5350 2100
-Wire Wire Line
 	4950 2300 4950 3600
 Wire Wire Line
 	4850 2200 4850 3750
-$Comp
-L weigu:Jumper JP1
-U 1 1 6027806F
-P 6900 2800
-F 0 "JP1" H 6900 3012 39  0000 C CNN
-F 1 "RESET" H 6900 2950 39  0000 C CNN
-F 2 "weigu:W0805" H 6900 2800 60  0001 C CNN
-F 3 "" H 6900 2800 60  0001 C CNN
-	1    6900 2800
-	1    0    0    -1  
-$EndComp
 Wire Wire Line
 	6450 1600 7550 1600
 Wire Wire Line
 	6600 2200 6600 3050
 Wire Wire Line
-	6600 3050 8400 3050
+	6600 3050 8550 3050
 Connection ~ 6600 2200
 NoConn ~ 6450 2400
-Wire Wire Line
-	6750 2800 5200 2800
-Wire Wire Line
-	5200 2800 5200 2000
-Wire Wire Line
-	5200 2000 5350 2000
 Wire Wire Line
 	4600 2650 4600 2400
 Wire Wire Line
@@ -509,29 +481,6 @@ Wire Wire Line
 	4300 2200 4300 2050
 Wire Wire Line
 	4600 2400 5350 2400
-Wire Wire Line
-	7050 2300 7050 2800
-$Comp
-L weigu:Jumper JP2
-U 1 1 602E6245
-P 6900 2900
-F 0 "JP2" H 7100 2850 39  0000 C CNN
-F 1 "IRQ_DIO1" H 6900 2850 39  0000 C CNN
-F 2 "weigu:W0805" H 6900 2900 60  0001 C CNN
-F 3 "" H 6900 2900 60  0001 C CNN
-	1    6900 2900
-	1    0    0    -1  
-$EndComp
-Wire Wire Line
-	8100 2400 8100 2950
-Wire Wire Line
-	8100 2950 7200 2950
-Wire Wire Line
-	7200 2950 7200 2900
-Wire Wire Line
-	7200 2900 7050 2900
-Wire Wire Line
-	6750 2900 6300 2900
 NoConn ~ 8050 2300
 NoConn ~ 8050 2200
 NoConn ~ 8050 2100
@@ -738,5 +687,88 @@ F 2 "weigu:WPin_1mm" H 8100 1650 60  0001 C CNN
 F 3 "" H 8100 1650 60  0000 C CNN
 	1    8100 1650
 	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	6450 2500 7050 2500
+Wire Wire Line
+	7050 2500 7050 2300
+NoConn ~ 5350 2100
+NoConn ~ 5350 2000
+$Comp
+L weigu:Diode_small D1
+U 1 1 60AAC83E
+P 8050 2750
+F 0 "D1" V 8000 2550 50  0000 L CNN
+F 1 "1N4148" V 8150 2400 50  0000 L CNN
+F 2 "weigu:W0805" H 8050 2750 60  0001 C CNN
+F 3 "" H 8050 2750 60  0000 C CNN
+	1    8050 2750
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	8050 2950 8050 3100
+$Comp
+L weigu:Diode_small D2
+U 1 1 60AAE412
+P 8200 2750
+F 0 "D2" V 8154 2828 50  0000 L CNN
+F 1 "1N4148" V 8300 2750 50  0000 L CNN
+F 2 "weigu:W0805" H 8200 2750 60  0001 C CNN
+F 3 "" H 8200 2750 60  0000 C CNN
+	1    8200 2750
+	0    1    1    0   
+$EndComp
+Wire Wire Line
+	8200 2400 8200 2550
+Wire Wire Line
+	8050 2400 8200 2400
+Wire Wire Line
+	8200 2950 8200 3100
+Wire Wire Line
+	8200 3100 8050 3100
+Connection ~ 8050 3100
+$Comp
+L weigu:WMHole H1
+U 1 1 60AF8028
+P 9300 3200
+F 0 "H1" H 9400 3246 50  0000 L CNN
+F 1 "WMHole" H 9400 3155 50  0000 L CNN
+F 2 "weigu:WPin_3mm" H 9300 3200 50  0001 C CNN
+F 3 "~" H 9300 3200 50  0001 C CNN
+	1    9300 3200
+	1    0    0    -1  
+$EndComp
+$Comp
+L weigu:WMHole H2
+U 1 1 60AF83A7
+P 9300 3400
+F 0 "H2" H 9400 3446 50  0000 L CNN
+F 1 "WMHole" H 9400 3355 50  0000 L CNN
+F 2 "weigu:WPin_3mm" H 9300 3400 50  0001 C CNN
+F 3 "~" H 9300 3400 50  0001 C CNN
+	1    9300 3400
+	1    0    0    -1  
+$EndComp
+$Comp
+L weigu:Open_Hardware_Logo LOGO?1
+U 1 1 60AA2EB9
+P 4100 3350
+F 0 "LOGO?1" H 4347 3375 50  0000 L CNN
+F 1 "Open_Hardware_Logo" H 4100 3125 50  0001 C CNN
+F 2 "Symbol:OSHW-Logo_5.7x6mm_SilkScreen" H 4100 3350 50  0001 C CNN
+F 3 "~" H 4100 3350 50  0001 C CNN
+	1    4100 3350
+	1    0    0    -1  
+$EndComp
+$Comp
+L weigu:Open_Hardware_Logo LOGO?2
+U 1 1 60AA3558
+P 4100 3850
+F 0 "LOGO?2" H 4347 3875 50  0000 L CNN
+F 1 "Open_Hardware_Logo" H 4100 3625 50  0001 C CNN
+F 2 "Symbol:OSHW-Logo_5.7x6mm_SilkScreen" H 4100 3850 50  0001 C CNN
+F 3 "~" H 4100 3850 50  0001 C CNN
+	1    4100 3850
+	1    0    0    -1  
 $EndComp
 $EndSCHEMATC

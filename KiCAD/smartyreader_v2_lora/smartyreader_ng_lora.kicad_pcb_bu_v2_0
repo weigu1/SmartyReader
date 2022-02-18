@@ -61,7 +61,7 @@
     (aux_axis_origin 0 0)
     (visible_elements FFFFFF7F)
     (pcbplotparams
-      (layerselection 0x00030_80000001)
+      (layerselection 0x3ffff_ffffffff)
       (usegerberextensions false)
       (usegerberattributes true)
       (usegerberadvancedattributes true)
@@ -84,9 +84,9 @@
       (subtractmaskfromsilk false)
       (outputformat 1)
       (mirror false)
-      (drillshape 1)
+      (drillshape 0)
       (scaleselection 1)
-      (outputdirectory ""))
+      (outputdirectory "/savit/kicad/smartyreader_ng_lora/gerber/"))
   )
 
   (net 0 "")
@@ -1658,7 +1658,7 @@
   (segment (start 134.239 115.57) (end 134.112 115.697) (width 1) (layer F.Cu) (net 16))
   (segment (start 136.779 115.57) (end 134.239 115.57) (width 1) (layer F.Cu) (net 16))
 
-  (zone (net 8) (net_name ~) (layer B.Cu) (tstamp 596DDFA7) (hatch edge 0.508)
+  (zone (net 8) (net_name ~) (layer B.Cu) (tstamp 6033CF7A) (hatch edge 0.508)
     (connect_pads (clearance 0.508))
     (min_thickness 0.254)
     (fill yes (arc_segments 16) (thermal_gap 0.508) (thermal_bridge_width 0.508))
@@ -2014,7 +2014,7 @@
       )
     )
   )
-  (zone (net 8) (net_name ~) (layer F.Cu) (tstamp 596DDFC0) (hatch edge 0.508)
+  (zone (net 8) (net_name ~) (layer F.Cu) (tstamp 6033CF77) (hatch edge 0.508)
     (connect_pads (clearance 0.508))
     (min_thickness 0.254)
     (fill yes (arc_segments 16) (thermal_gap 0.508) (thermal_bridge_width 0.508))
