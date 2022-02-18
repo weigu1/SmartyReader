@@ -1,0 +1,10 @@
+(module weigu:WPin_3mm (layer F.Cu) (tedit 4E1D58E7)
+  (descr "module 1 pin (ou trou mecanique de percage)")
+  (fp_text reference AD1 (at 0 -3.048) (layer F.SilkS) hide
+    (effects (font (size 1.016 1.016) (thickness 0.254)))
+  )
+  (fp_text value C1 (at 0 2.794) (layer F.SilkS) hide
+    (effects (font (size 1.016 1.016) (thickness 0.254)))
+  )
+  (pad 1 thru_hole circle (at 0 0) (size 5.12826 5.12826) (drill 2.99974) (layers *.Cu *.Mask F.SilkS))
+)

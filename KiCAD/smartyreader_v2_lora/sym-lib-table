@@ -1,0 +1,3 @@
+(sym_lib_table
+  (lib (name smartyreader_ng_lora-rescue)(type Legacy)(uri ${KIPRJMOD}/smartyreader_ng_lora-rescue.lib)(options "")(descr ""))
+)

@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# DESTRUCTIVELY convert all postscript files in working directory to PDF.
+# Requires ghostscript.
+
+# Mithat Konar 2013 <http://mithatkonar.com>
+
+# Helpful hint: http://ghostscript.com/doc/current/Use.htm#Known_paper_sizes
+
+OPTIONS="-dOptimize=true -sPAPERSIZE=letter"
+
+FILES=$(ls -1 *.ps)
+
+for file in $FILES
+do
+ps2pdf $OPTIONS $file && rm $file
+done
+
+
