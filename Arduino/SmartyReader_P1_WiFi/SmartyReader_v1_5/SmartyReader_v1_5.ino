@@ -96,9 +96,10 @@ const long PUBLISH_TIME = 20000;
 //#define STATIC        // if static IP needed (no DHCP)
 //#define ETHERNET      // if Ethernet with Funduino (W5100) instead of WiFi
 #define OTA             // if Over The Air update needed (security risk!)
-// power and energy are published as JSON string, for more data uncomment the following line
-// subscribe to topic/# (e.g. lamsmarty/#)
-//#define PUBLISH_ALL 0   // all the data is published 0 for normal string, 1 for json
+/* power and energy and energy per day are published as JSON string,
+   Subscribe to topic/# (e.g. lamsmarty/#). For more data uncomment the following
+   line, then all the data is published (0 for normal string, 1 for json).*/
+//#define PUBLISH_ALL 0
 
 #include "ESPBacker.h"  // ESP helper lib (more on weigu.lu)
 #include <PubSubClient.h>

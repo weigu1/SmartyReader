@@ -103,10 +103,10 @@ const long PUBLISH_TIME = 20000;
    const char *MY_WIFI_SSID = "mySSID"; const char *MY_WIFI_PASSWORD = "myPASS"; */
 #define USE_SECRETS
 //#define BME280_I2C     // if you want to add a temp sensor to I2C connector
-/* power and energy are published as JSON string, for more data uncomment the following
-    line. All the data is published (0 for normal string, 1 for json). Subscribe to
-    topic/# (e.g. lamsmarty/#). */
-#define PUBLISH_ALL 0
+/* power and energy and energy per day are published as JSON string,
+   Subscribe to topic/# (e.g. lamsmarty/#). For more data uncomment the following
+   line, then all the data is published (0 for normal string, 1 for json).*/
+//#define PUBLISH_ALL 0
 
 /****** Arduino libraries needed ******/
 #include "ESPToolbox.h"  // ESP helper lib (more on weigu.lu)
