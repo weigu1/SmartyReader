@@ -92,14 +92,13 @@ const long PUBLISH_TIME = 20000;
 
 // Comment or uncomment the following lines suiting your needs
 //#define OLD_HARDWARE    // for the boards before V2.0
-//#define MQTTSECURE    // if you want a secure connection over MQTT (recommended!!)
+//#define MQTTPASSWORD     // if you want an MQTT connection with password (recommended!!)
 //#define STATIC        // if static IP needed (no DHCP)
 //#define ETHERNET      // if Ethernet with Funduino (W5100) instead of WiFi
 #define OTA             // if Over The Air update needed (security risk!)
-/* power and energy and energy per day are published as JSON string,
-   Subscribe to topic/# (e.g. lamsmarty/#). For more data uncomment the following
-   line, then all the data is published (0 for normal string, 1 for json).*/
-//#define PUBLISH_ALL 0
+// power and energy are published as JSON string, for more data uncomment the following line
+// subscribe to topic/# (e.g. lamsmarty/#)
+//#define PUBLISH_ALL 0   // all the data is published 0 for normal string, 1 for json
 
 #include "ESPBacker.h"  // ESP helper lib (more on weigu.lu)
 #include <PubSubClient.h>
@@ -142,20 +141,15 @@ IPAddress UDP_LOG_PC_IP(192,168,1,50);
 #endif // #ifdef OTA
 
 // MQTT settings
-const char *MQTT_SERVER = "192.168.1.60";
-const char *MQTT_CLIENT_ID = "smarty_lam1_p12";
+const char *MQTT_SERVER = "192.168.1.222";
+const char *MQTT_CLIENT_ID = "smarty_lam1_p13";
 String MQTT_TOPIC = "lamsmarty";
-#ifdef MQTTSECURE // http://weigu.lu/tutorials/sensors2bus/06_mqtt/index.html
-  const short MQTT_PORT = 8883;  // port for secure communication
+const short MQTT_PORT = 1883; // or 8883
+WiFiClient espClient;
+#ifdef MQTTPASSWORD
   const char *MQTT_USER = "me";
-  const char *MQTT_PASS = "myMqttPass12!";
-  const char *MQTT_PSK_IDENTITY = "btsiot1";
-  const char *MQTT_PSK_KEY = "0123456789abcdef0123"; // hex string without 0x
-  WiFiClientMQTTSECURE espClient;
-#else
-  const short MQTT_PORT = 1883; // clear text = 1883
-  WiFiClient espClient;
-#endif
+  const char *MQTT_PASS = "meagain";
+#endif // MQTTPASSWORD
 
 ESPBacker B;
 PubSubClient mqttClient(espClient);
@@ -314,11 +308,11 @@ void init_wifi() {
 void mqtt_connect() {
   while (!mqttClient.connected()) { // Loop until we're reconnected
     B.log("Attempting MQTT connection...");
-    #ifdef MQTTSECURE
+    #ifdef MQTTPASSWORD
       if (mqttClient.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
-    #else
+    #else  
       if (mqttClient.connect(MQTT_CLIENT_ID)) { // Attempt to connect
-    #endif // ifdef UNMQTTSECURE
+    #endif // ifdef MQTTPASSWORD
       B.log_ln("MQTT connected");
       // Once connected, publish an announcement...
       //mqttClient.publish(MQTT_TOPIC, "{\"dt\":\"connected\"}");

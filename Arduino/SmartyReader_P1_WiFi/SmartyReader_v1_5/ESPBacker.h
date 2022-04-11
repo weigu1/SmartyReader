@@ -1,7 +1,7 @@
 #ifndef ESPBACKER_h
 #define ESPBACKER_h
 
-//#define WEBSERVER  // comment if no webserver needed
+//#define WEBSERVER  // not working!! yet (comment if no webserver needed) 
 
 #include "Arduino.h"
 
@@ -15,7 +15,8 @@
 #else
   #include <WiFi.h>                  // ESP32
   #include <ESPmDNS.h>
-  #ifdef WEBSERVER
+  #include <WiFiClientSecure.h>
+  #ifdef WEBSERVER  
     #include <WebServer.h>
     WebServer http_server(80);    // create a web server on port 80
   #endif // ifdef WEBSERVER
@@ -27,6 +28,7 @@
 #include <ArduinoOTA.h>
 #include <SPI.h>
 #include <Ethernet.h>
+
 
 /*#ifdef ESP8266
   WebSocketsServer ws_server(81);      // create a ws server on port 81
