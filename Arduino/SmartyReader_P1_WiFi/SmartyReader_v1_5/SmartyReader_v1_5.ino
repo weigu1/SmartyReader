@@ -348,6 +348,43 @@ void init_serial4smarty() {
 }
 /********** MQTT functions **************************************************/
 
+void mqtt_publish_all(boolean json) {
+  String Sub_topic, Mqtt_msg = "";
+  uint8_t i;
+  for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
+    if (dsmr[i].value != "") {
+      if (json) {
+        if (dsmr[i].type == 'f') {
+          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toFloat();
+        }
+        else if (dsmr[i].type == 'i') {
+          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toInt();
+        }
+        else { // string
+          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":\"" + dsmr[i].value;
+        }
+        if (dsmr[i].unit != "") {
+          Mqtt_msg = Mqtt_msg + ",\"" + dsmr[i].name + "_unit" + "\":\"" + dsmr[i].unit + "\"}";
+        }
+        else if (dsmr[i].type == 's') {
+          Mqtt_msg = Mqtt_msg + "\"}";
+        }
+        else {
+          Mqtt_msg = Mqtt_msg + "}";
+        }
+      }
+      else {
+        Mqtt_msg = dsmr[i].value;
+      }
+      Sub_topic = MQTT_TOPIC + '/' + dsmr[i].name;
+      return_value=mqttClient.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+      B.log_ln("------------------");
+      B.log("Published message: ");
+      B.log_ln(Mqtt_msg);
+    }
+  }
+}
+
 void mqtt_publish_energy_and_power() {
   struct tm t;
   time_t t_of_day;
@@ -405,42 +442,7 @@ void mqtt_publish_energy_and_power() {
   }
 }
 
-void mqtt_publish_all(boolean json) {
-  String Sub_topic, Mqtt_msg = "";
-  uint8_t i;
-  for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
-    if (dsmr[i].value != "") {
-      if (json) {
-        if (dsmr[i].type == 'f') {
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toFloat();
-        }
-        else if (dsmr[i].type == 'i') {
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toInt();
-        }
-        else { // string
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":\"" + dsmr[i].value;
-        }
-        if (dsmr[i].unit != "") {
-          Mqtt_msg = Mqtt_msg + ",\"" + dsmr[i].name + "_unit" + "\":\"" + dsmr[i].unit + "\"}";
-        }
-        else if (dsmr[i].type == 's') {
-          Mqtt_msg = Mqtt_msg + "\"}";
-        }
-        else {
-          Mqtt_msg = Mqtt_msg + "}";
-        }
-      }
-      else {
-        Mqtt_msg = dsmr[i].name + " = " + dsmr[i].value + " " + dsmr[i].unit;
-      }
-      Sub_topic = MQTT_TOPIC + '/' + dsmr[i].name;
-      return_value=mqttClient.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
-      B.log_ln("------------------");
-      B.log("Published message: ");
-      B.log_ln(Mqtt_msg);
-    }
-  }
-}
+
 /********** SMARTY functions **************************************************/
 
 uint16_t read_telegram() {

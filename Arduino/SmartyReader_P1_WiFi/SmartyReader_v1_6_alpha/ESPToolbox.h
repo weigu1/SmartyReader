@@ -27,6 +27,7 @@
 
 
 //#include <WebSocketsServer.h>
+#include <WiFiClientSecure.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <SPI.h>

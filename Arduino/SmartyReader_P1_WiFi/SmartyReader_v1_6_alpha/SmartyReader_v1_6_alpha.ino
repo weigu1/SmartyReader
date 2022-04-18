@@ -15,7 +15,7 @@
   V1.4 2020-06-24 enable line no more switched (10s data)
   V1.5 2021-04-26 for new boards V2.0 (PCB) without transistor
                   old hardware supported
-  V1.6 2021-08-12 Using secrets file for password, 3 new gas fields,
+  V1.6 2021-08-12 Using config or secrets file for password, 3 new gas fields,
                   BME280 suppport, changed ESPBacker to ESPToolbox, bugfixes
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
@@ -89,26 +89,33 @@
 
 */
 
-/****** Publishes every in milliseconds ******/
-const long PUBLISH_TIME = 20000;
+/*!!!!!!!!!! make your changes in config.h (or secrets.h) !!!!!!!!!*/
 
-/****** Comment or uncomment the following lines suiting your needs ******/
+/*!!!!!!!!!! to debug you can use the onboard LED, a second serial port on D4
+             or best: UDP! Look in setup()                !!!!!!!!!*/
+
+/*!!!!!!!!!! Comment or uncomment the following lines suiting your needs !!!!!!!!!*/
 //#define OLD_HARDWARE    // for the boards before V2.0
-//#define MQTTSECURE    // if you want a secure connection over MQTT (recommended!!)
-//#define STATIC        // if static IP needed (no DHCP)
-//#define ETHERNET      // if Ethernet with Funduino (W5100) instead of WiFi
+//#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
+//#define STATIC          // if static IP needed (no DHCP)
+//#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
 #define OTA             // if Over The Air update needed (security risk!)
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
-   in a folder named "Secrets" and must contain your secrets e.g.:
-   const char *MY_WIFI_SSID = "mySSID"; const char *MY_WIFI_PASSWORD = "myPASS"; */
+   in a folder named "Secrets" and must contain the same things than the file config.h*/
 #define USE_SECRETS
-//#define BME280_I2C     // if you want to add a temp sensor to I2C connector
+//#define BME280_I2C     // if you wanSmartyReader_v1_6_alphat to add a temp sensor to I2C connector
 /* power and energy and energy per day are published as JSON string,
    Subscribe to topic/# (e.g. lamsmarty/#). For more data uncomment the following
    line, then all the data is published (0 for normal string, 1 for json).*/
-//#define PUBLISH_ALL 0
+//#define PUBLISH_ALL_VALUES_ONLY
+#define PUBLISH_COOKED
 
 /****** Arduino libraries needed ******/
+#ifdef USE_SECRETS
+  #include <secrets.h>
+#else  
+  #include "config.h"      // most of the things you need to change are here
+#endif // USE_SECRETS  
 #include "ESPToolbox.h"  // ESP helper lib (more on weigu.lu)
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -122,67 +129,31 @@ const long PUBLISH_TIME = 20000;
 #endif
 
 /****** WiFi and network settings ******/
-#ifdef USE_SECRETS
-  #include <secrets.h>
-  const char *WIFI_SSID = MY_WIFI_SSID;           // ssid     
-  const char *WIFI_PASSWORD = MY_WIFI_PASSWORD;   // password
-  #ifdef OTA                                      // Over The Air update settings
-    const char *OTA_NAME = "SmartyReader_LAM";
-    const char *OTA_PASS_HASH = MY_OTA_PASS_HASH; // md5 hash for OTA
-  #endif // ifdef OTA  
-#else
-  const char *WIFI_SSID = mySSID;           // if no secrets file, add your SSID here
-  const char *WIFI_PASSWORD = myPASSWORD;   // if no secrets file, add your PASS here
-  #ifdef OTA                                // Over The Air update settings
-    const char *OTA_NAME = "garden_watering";
-    const char *OTA_PASS_HASH = myOTAHASH;  // if no secrets file, add your OTA HASH here
-  #endif // ifdef OTA      
-#endif  // ifdef USE_SECRETS
-const char *NET_MDNSNAME = "SmartyReader";      // optional (access with SmartyReader.local)
-const char *NET_HOSTNAME = "SmartyReader";      // optional
+const char *WIFI_SSID = MY_WIFI_SSID;           // if no secrets file, use the config.h file
+const char *WIFI_PASSWORD = MY_WIFI_PASSWORD;   // if no secrets file, use the config.h file
+#ifdef OTA                                // Over The Air update settings
+  const char *OTA_NAME = MY_OTA_NAME;
+  const char *OTA_PASS_HASH = MY_OTA_PASS_HASH;  // use the config.h file
+#endif // ifdef OTA      
 #ifdef STATIC
-  IPAddress NET_LOCAL_IP (192,168,1,181);    // 3x optional for static IP
-  IPAddress NET_GATEWAY (192,168,1,20);
-  IPAddress NET_MASK (255,255,255,0);  
-#endif // ifdef STATIC*/
-#ifdef ETHERNET
-  uint8_t NET_MAC[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED }; //only for ethernet
-#endif //#ifdef ETHERNET*/
-const word UDP_LOG_PORT = 6666;             // UDP logging settings
-IPAddress UDP_LOG_PC_IP(192,168,1,50);
-const char *NTP_SERVER = "lu.pool.ntp.org"; // NTP settings
-// your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
-const char *TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00";
+  IPAddress NET_LOCAL_IP (NET_LOCAL_IP_BYTES);    // 3x optional for static IP
+  IPAddress NET_GATEWAY (NET_GATEWAY_BYTES);      // look in config.h
+  IPAddress NET_MASK (NET_MASK_BYTES);  
+#endif // ifdef STATIC
+IPAddress UDP_LOG_PC_IP(UDP_LOG_PC_IP_BYTES);     // UDP logging if enabled in setup() (config.h)
 
 /****** MQTT settings ******/
 #define MQTT_MAX_PACKET_SIZE 512
-const char *MQTT_SERVER = "192.168.1.60";
-const char *MQTT_CLIENT_ID = "SmartyReader_LAM_1";
-String MQTT_TOPIC_OUT = "lamsmarty";
-#ifdef MQTTSECURE // http://weigu.lu/tutorials/sensors2bus/06_mqtt/index.html
-  const short MQTT_PORT = 8883;                      // port for secure communication
-  const char *MQTT_USER = "me";
-  const char *MQTT_PASS = "myMqttPass12!";
-  const char *MQTT_PSK_IDENTITY = "btsiot1";
-  const char *MQTT_PSK_KEY = "0123456789abcdef0123"; // hex string without 0x
-  WiFiClient MQTTSECURE espClient;
-#else
-  const short MQTT_PORT = 1883;                      // clear text = 1883
-  WiFiClient espClient;
-#endif
+const short MQTT_PORT = MY_MQTT_PORT;
+WiFiClient espClient;
+#ifdef MQTTPASSWORD
+  const char *MQTT_USER = MY_MQTT_USER;
+  const char *MQTT_PASS = MY_MQTT_PASS;
+#endif // MQTTPASSWORD
+
 PubSubClient MQTT_Client(espClient);
 String mqtt_msg;
-DynamicJsonDocument doc_out(512);
-DynamicJsonDocument doc_in(256);
-
-/****** SmartyReader Key ******/
-// Key for SAG1030700089067 (16 byte!)
-uint8_t KEY_SMARTY[] = {0xAE, 0xBD, 0x21, 0xB7, 0x69, 0xA6, 0xD1, 0x3C,
-                        0x0D, 0xF0, 0x64, 0xE3, 0x83, 0x68, 0x2E, 0xFF};
-// Auth data: hard coded in Lux (no need to change it!) but not in Austria :)  (17 byte!)
-uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
-                       0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
-                       0xFF};
+DynamicJsonDocument doc_out(1024);
 
 
 ESPToolbox Tb;
@@ -220,69 +191,71 @@ struct Vector_GCM {
 
 // DMSR variables
 struct Dsmr_field {
+  const byte nr;
   const String name;
   const String id;
   const String unit;
   String value;
-  char type;  // string s, float f, integer i
+  const char type;  // string s, double f, integer i
 };
 
 // https://electris.lu/files/Dokumente_und_Formulare/Netz_Tech_Dokumente/SPEC_-_E-Meter_P1_specification_20210305.pdf
+
 Dsmr_field dsmr[] = {
-  {"identification", "", "","",'s'},
-  {"p1_version", "1-3:0.2.8", "","",'s'},
-  {"timestamp", "0-0:1.0.0", "","",'s'},
-  {"equipment_id", "0-0:42.0.0", "","",'s'},
-  {"act_energy_imported_p_plus", "1-0:1.8.0", "kWh","",'f'},
-  {"act_energy_exported_p_minus", "1-0:2.8.0", "kWh","",'f'},
-  {"react_energy_imported_q_plus", "1-0:3.8.0", "kvarh","",'f'},
-  {"react_energy_exported_q_minus", "1-0:4.8.0", "kvarh","",'f'},
-  {"act_pwr_imported_p_plus", "1-0:1.7.0", "kW","",'f'},
-  {"act_pwr_exported_p_minus", "1-0:2.7.0", "kW","",'f'},
-  {"react_pwr_imported_q_plus", "1-0:3.7.0", "kvar","",'f'},
-  {"react_pwr_exported_q_minus", "1-0:4.7.0", "kvar","",'f'},
-  {"active_threshold_smax", "0-0:17.0.0", "kVA","",'f'},
-  {"breaker_ctrl_state_0", "0-0:96.3.10", "","",'i'},
-  {"num_pwr_failures", "0-0:96.7.21", "","",'i'},
-  {"num_volt_sags_l1", "1-0:32.32.0", "","",'i'},
-  {"num_volt_sags_l2", "1-0:52.32.0", "","",'i'},
-  {"num_volt_sags_l3", "1-0:72.32.0", "","",'i'},
-  {"num_volt_swells_l1", "1-0:32.36.0", "","",'i'},
-  {"num_volt_swells_l2", "1-0:52.36.0", "","",'i'},
-  {"num_volt_swells_l3", "1-0:72.36.0", "","",'i'},
-  {"breaker_ctrl_state_0", "0-0:96.3.10", "","",'i'},
-  {"msg_long_e_meter", "0-0:96.13.0", "","",'s'},
-  {"msg_long_ch2", "0-0:96.13.2", "","",'s'},
-  {"msg_long_ch3", "0-0:96.13.3", "","",'s'},
-  {"msg_long_ch4", "0-0:96.13.4", "","",'s'},
-  {"msg_long_ch5", "0-0:96.13.5", "","",'s'},
-  {"curr_l1", "1-0:31.7.0", "A","",'f'},
-  {"curr_l2", "1-0:51.7.0", "A","",'f'},
-  {"curr_l3", "1-0:71.7.0", "A","",'f'},
-  {"act_pwr_imp_p_plus_l1", "1-0:21.7.0", "kW","",'f'},
-  {"act_pwr_imp_p_plus_l2", "1-0:41.7.0", "kW","",'f'},
-  {"act_pwr_imp_p_plus_l3", "1-0:61.7.0", "kW","",'f'},
-  {"act_pwr_exp_p_minus_l1", "1-0:22.7.0", "kW","",'f'},
-  {"act_pwr_exp_p_minus_l2", "1-0:42.7.0", "kW","",'f'},
-  {"act_pwr_exp_p_minus_l3", "1-0:62.7.0", "kW","",'f'},
-  {"react_pwr_imp_q_plus_l1", "1-0:23.7.0", "kvar","",'f'},
-  {"react_pwr_imp_q_plus_l2", "1-0:43.7.0", "kvar","",'f'},
-  {"react_pwr_imp_q_plus_l3", "1-0:63.7.0", "kvar","",'f'},
-  {"react_pwr_exp_q_minus_l1", "1-0:24.7.0", "kvar","",'f'},
-  {"react_pwr_exp_q_minus_l2", "1-0:44.7.0", "kvar","",'f'},
-  {"react_pwr_exp_q_minus_l3", "1-0:64.7.0", "kvar","",'f'},
-  {"apparent_export_pwr", "1-0:10.7.0", "kVA","",'f'},
-  {"apparent_import_pwr", "1-0:9.7.0", "kVA","",'f'},
-  {"breaker_ctrl_state_1", "0-1:96.3.10", "","",'i'},
-  {"breaker_ctrl_state_2", "0-2:96.3.10", "","",'i'},
-  {"gas_index", "0-1:24.2.1", "m3","",'f'},
-  {"limiter_curr_monitor", "1-1:31.4.0", "A","",'f'},
-  {"volt_l1", "1-0:32.7.0", "V","",'f'},
-  {"volt_l2", "1-0:52.7.0", "V","",'f'},
-  {"volt_l3", "1-0:72.7.0", "V","",'f'},
-  {"device_Type", "0-1:24.4.0", "", ""},
-  {"mbus_ch_sw_pos", "0-1:24.1.0", "", ""},
-  {"gas_meter_id_hex", "0-1:96.1.0", "", ""}, 
+  {0,"identification", "", "","NA",'s'},
+  {1,"p1_version", "1-3:0.2.8", "","NA",'s'},
+  {2,"timestamp", "0-0:1.0.0", "","NA",'s'},
+  {3,"equipment_id", "0-0:42.0.0", "","NA",'s'},
+  {4,"act_energy_imported_p_plus", "1-0:1.8.0", "kWh","NA",'f'},
+  {5,"act_energy_exported_p_minus", "1-0:2.8.0", "kWh","NA",'f'},
+  {6,"react_energy_imported_q_plus", "1-0:3.8.0", "kvarh","NA",'f'},
+  {7,"react_energy_exported_q_minus", "1-0:4.8.0", "kvarh","NA",'f'},
+  {8,"act_pwr_imported_p_plus", "1-0:1.7.0", "kW","NA",'f'},
+  {9,"act_pwr_exported_p_minus", "1-0:2.7.0", "kW","NA",'f'},
+  {10,"react_pwr_imported_q_plus", "1-0:3.7.0", "kvar","NA",'f'},
+  {11,"react_pwr_exported_q_minus", "1-0:4.7.0", "kvar","NA",'f'},
+  {12,"active_threshold_smax", "0-0:17.0.0", "kVA","NA",'f'},
+  {13,"breaker_ctrl_state_0", "0-0:96.3.10", "","NA",'i'},
+  {14,"num_pwr_failures", "0-0:96.7.21", "","NA",'i'},
+  {15,"num_volt_sags_l1", "1-0:32.32.0", "","NA",'i'},
+  {16,"num_volt_sags_l2", "1-0:52.32.0", "","NA",'i'},
+  {17,"num_volt_sags_l3", "1-0:72.32.0", "","NA",'i'},
+  {18,"num_volt_swells_l1", "1-0:32.36.0", "","NA",'i'},
+  {19,"num_volt_swells_l2", "1-0:52.36.0", "","NA",'i'},
+  {20,"num_volt_swells_l3", "1-0:72.36.0", "","NA",'i'},
+  {21,"breaker_ctrl_state_0", "0-0:96.3.10", "","NA",'i'},
+  {22,"msg_long_e_meter", "0-0:96.13.0", "","NA",'s'},
+  {23,"msg_long_ch2", "0-0:96.13.2", "","NA",'s'},
+  {24,"msg_long_ch3", "0-0:96.13.3", "","NA",'s'},
+  {25,"msg_long_ch4", "0-0:96.13.4", "","NA",'s'},
+  {26,"msg_long_ch5", "0-0:96.13.5", "","NA",'s'},
+  {27,"curr_l1", "1-0:31.7.0", "A","NA",'f'},
+  {28,"curr_l2", "1-0:51.7.0", "A","NA",'f'},
+  {29,"curr_l3", "1-0:71.7.0", "A","NA",'f'},
+  {30,"act_pwr_imp_p_plus_l1", "1-0:21.7.0", "kW","NA",'f'},
+  {31,"act_pwr_imp_p_plus_l2", "1-0:41.7.0", "kW","NA",'f'},
+  {32,"act_pwr_imp_p_plus_l3", "1-0:61.7.0", "kW","NA",'f'},
+  {33,"act_pwr_exp_p_minus_l1", "1-0:22.7.0", "kW","NA",'f'},
+  {34,"act_pwr_exp_p_minus_l2", "1-0:42.7.0", "kW","NA",'f'},
+  {35,"act_pwr_exp_p_minus_l3", "1-0:62.7.0", "kW","NA",'f'},
+  {36,"react_pwr_imp_q_plus_l1", "1-0:23.7.0", "kvar","NA",'f'},
+  {37,"react_pwr_imp_q_plus_l2", "1-0:43.7.0", "kvar","NA",'f'},
+  {38,"react_pwr_imp_q_plus_l3", "1-0:63.7.0", "kvar","NA",'f'},
+  {39,"react_pwr_exp_q_minus_l1", "1-0:24.7.0", "kvar","NA",'f'},
+  {40,"react_pwr_exp_q_minus_l2", "1-0:44.7.0", "kvar","NA",'f'},
+  {41,"react_pwr_exp_q_minus_l3", "1-0:64.7.0", "kvar","NA",'f'},
+  {42,"apparent_export_pwr", "1-0:10.7.0", "kVA","NA",'f'},
+  {43,"apparent_import_pwr", "1-0:9.7.0", "kVA","NA",'f'},
+  {44,"breaker_ctrl_state_1", "0-1:96.3.10", "","NA",'i'},
+  {45,"breaker_ctrl_state_2", "0-2:96.3.10", "","NA",'i'},
+  {46,"limiter_curr_monitor", "1-1:31.4.0", "A","NA",'f'},
+  {47,"volt_l1", "1-0:32.7.0", "V","NA",'f'},
+  {48,"volt_l2", "1-0:52.7.0", "V","NA",'f'},
+  {49,"volt_l3", "1-0:72.7.0", "V","NA",'f'},
+  {50,"gas_index", "0-1:24.2.1", "m3","NA",'f'},
+  {51,"device_Type", "0-1:24.4.0", "", "NA",' '},
+  {52,"mbus_ch_sw_pos", "0-1:24.1.0", "", "NA",' '},
+  {53,"gas_meter_id_hex", "0-1:96.1.0", "", "NA",' '}, 
 };
 
 Vector_GCM Vector_SM;
@@ -315,7 +288,7 @@ void loop() {
   #endif // ifdef OTA
   read_telegram();
   if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
-    decrypt_and_publish();
+    decrypt_and_publish(SAMPLES);
   }
   if (WiFi.status() != WL_CONNECTED) {  // if WiFi disconnected, reconnect
     init_wifi();
@@ -342,11 +315,11 @@ void init_wifi() {
 void mqtt_connect() {
   while (!MQTT_Client.connected()) { // Loop until we're reconnected
     Tb.log("Attempting MQTT connection...");
-    #ifdef MQTTSECURE
+    #ifdef MQTTPASSWORD
       if (MQTT_Client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
-    #else
+    #else  
       if (MQTT_Client.connect(MQTT_CLIENT_ID)) { // Attempt to connect
-    #endif // ifdef UNMQTTSECURE
+    #endif // ifdef MQTTPASSWORD
       Tb.log_ln("MQTT connected");
       // Once connected, publish an announcement...
       //MQTT_Client.publish(MQTT_TOPIC_OUT, "{\"dt\":\"connected\"}");
@@ -382,70 +355,14 @@ void init_serial4smarty() {
 }
 /********** MQTT functions **************************************************/
 
-void mqtt_publish_energy_and_power() {
-  struct tm t;
-  time_t t_of_day;
-  static float energy_consumption_previous = dsmr[4].value.toFloat();
-  static float energy_production_previous = dsmr[5].value.toFloat();
-  static float energy_consumption_midnight = dsmr[4].value.toFloat();
-  static float energy_production_midnight = dsmr[5].value.toFloat();
-  float power_consumption = 0;
-  float power_production = 0;
-  float energy_consumption_cumul_day = 0;
-  float energy_production_cumul_day = 0;
-  t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
-  t.tm_mon = dsmr[2].value.substring(5,7).toInt();
-  t.tm_mday = dsmr[2].value.substring(8,10).toInt();
-  t.tm_hour = dsmr[2].value.substring(11,13).toInt();
-  t.tm_min = dsmr[2].value.substring(14,16).toInt();
-  t.tm_sec = dsmr[2].value.substring(17,19).toInt();
-  t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
-  t_of_day = mktime(&t);
-  static unsigned long epoch_previous = t_of_day;
-  unsigned long epoch = t_of_day;
-  float energy_consumption = dsmr[4].value.toFloat();
-  float energy_production = dsmr[5].value.toFloat();
-  int delta_time = epoch_previous-epoch;
-  power_consumption = (energy_consumption_previous-energy_consumption)*3600/delta_time;
-  power_production = (energy_production_previous-energy_production)*3600/delta_time;
-  energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
-  energy_production_cumul_day = energy_production - energy_production_midnight;
-  Tb.log_ln("*****************");
-  Tb.log_ln(String(power_consumption));
-  Tb.log_ln(String(power_production));
-  Tb.log_ln(String(delta_time));
-  Tb.log_ln("*****************");
-  String Sub_topic, Mqtt_msg = "";
-  Mqtt_msg = "{\"" + dsmr[2].name + "\":\"" + dsmr[2].value + "\",\"" + dsmr[3].name + "\":\"" +
-             dsmr[3].value +  "\",\"energy_consumption [" + dsmr[4].unit + "]\":" +
-             energy_consumption + ",\"energy_consumption_cumul_day [kWh]\":" +
-             energy_consumption_cumul_day + ",\"energy_production [" + dsmr[5].unit + "]\":" +
-             energy_production + ",\"energy_production_cumul_day [kWh]\":" +
-             energy_production_cumul_day + ",\"power_consumption [kW]\":" +
-             power_consumption + ",\"power_production [kW]\":" + power_production + "}";
-  MQTT_Client.publish(MQTT_TOPIC_OUT.c_str(), Mqtt_msg.c_str());  
-  Tb.log_ln("------------------");
-  Tb.log("Published message: ");
-  Tb.log_ln(Mqtt_msg);
-  energy_consumption_previous = dsmr[4].value.toFloat();
-  energy_production_previous = dsmr[5].value.toFloat();
-  epoch_previous = t_of_day;
-  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-    energy_consumption_midnight = dsmr[4].value.toFloat();
-  }
-  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-    energy_production_midnight = dsmr[5].value.toFloat();
-  }
-}
-
 void mqtt_publish_all(boolean json) {
   String Sub_topic, Mqtt_msg = "";
   uint8_t i;
   for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
-    if (dsmr[i].value != "") {
+    if (dsmr[i].value != "NA") {
       if (json) {
         if (dsmr[i].type == 'f') {
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toFloat();
+          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toDouble();          
         }
         else if (dsmr[i].type == 'i') {
           Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toInt();
@@ -464,7 +381,7 @@ void mqtt_publish_all(boolean json) {
         }
       }
       else {
-        Mqtt_msg = dsmr[i].name + " = " + dsmr[i].value + " " + dsmr[i].unit;
+        Mqtt_msg = dsmr[i].value;
       }
       Sub_topic = MQTT_TOPIC_OUT + '/' + dsmr[i].name;
       MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
@@ -472,8 +389,39 @@ void mqtt_publish_all(boolean json) {
       Tb.log("Published message: ");
       Tb.log_ln(Mqtt_msg);
     }
+    else {
+      Tb.log_ln("error when publishing message (buffer big enough?)");
+    }
   }
 }
+
+/**/
+void mqtt_publish_cooked(int samples) {
+  double calculated_values[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+  calculate_energy_and_power(calculated_values,samples);
+  String Sub_topic, Mqtt_msg = "";
+  doc_out[dsmr[2].name] = dsmr[2].value;
+  doc_out[dsmr[3].name] = dsmr[3].value;
+  doc_out["energy_consumption_kWh"] = calculated_values[0];  
+  doc_out["energy_consumption_cumul_day_kWh"] = calculated_values[6];
+  doc_out["energy_production_kWh"] = calculated_values[1];  
+  doc_out["energy_production_cumul_day_kWh"] = calculated_values[7];
+  doc_out["power_consumption_kW"] = calculated_values[2];  
+  doc_out["power_production_kW"] = calculated_values[3];
+  doc_out["power_consumption_calculated_kW"] = calculated_values[4];  
+  doc_out["power_production_calculated_kW"] = calculated_values[5];
+  doc_out["power_excess_solar_kW"] = calculated_values[8];
+  doc_out["power_excess_solar_calculated_kW"] = calculated_values[9];     
+  doc_out["power_consumption_calc_average_kW"] = calculated_values[10];
+  doc_out["power_production_calc_average_kW"] = calculated_values[11];
+  serializeJson(doc_out, Mqtt_msg);
+  MQTT_Client.publish(MQTT_TOPIC_OUT.c_str(), Mqtt_msg.c_str());  
+  Tb.log_ln("------------------");
+  Tb.log("Published message: ");
+  Tb.log_ln(Mqtt_msg);
+}
+
+
 /********** SMARTY functions **************************************************/
 
 void read_telegram() {
@@ -500,7 +448,202 @@ void read_telegram() {
   }
 }
 
-void decrypt_and_publish() {
+/* Here we calculate power from energy, the energy/day and the excess solar power */
+/*void calculate_energy_and_power(double calculated_values[20], int samples) {  
+  struct tm t;
+  time_t t_of_day;
+  static double energy_consumption_previous = dsmr[4].value.toDouble();
+  static double energy_production_previous = dsmr[5].value.toDouble();
+  static double energy_consumption_midnight = dsmr[4].value.toDouble();
+  static double energy_production_midnight = dsmr[5].value.toDouble();  
+  static double energy_consumption_sum = 0;
+  static double energy_production_sum = 0;  
+  static int counter = 0; // needed to calculate average over samples
+  counter = counter + 1;
+  double power_consumption_calculated = 0;
+  double power_production_calculated = 0;
+  double power_excess_solar = 0;  
+  double power_excess_solar_calc = 0;
+  double energy_consumption_cumul_day = 0;
+  double energy_production_cumul_day = 0;
+  double power_consumption_calc_average = 0;
+  double power_production_calc_average = 0;  
+  t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
+  t.tm_mon = dsmr[2].value.substring(5,7).toInt();
+  t.tm_mday = dsmr[2].value.substring(8,10).toInt();
+  t.tm_hour = dsmr[2].value.substring(11,13).toInt();
+  t.tm_min = dsmr[2].value.substring(14,16).toInt();
+  t.tm_sec = dsmr[2].value.substring(17,19).toInt();
+  t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
+  t_of_day = mktime(&t);
+  static unsigned long epoch_previous = t_of_day;
+  unsigned long epoch = t_of_day;
+  double energy_consumption = dsmr[4].value.toDouble();
+  double energy_production = dsmr[5].value.toDouble();
+  double power_consumption = dsmr[8].value.toDouble();
+  double power_production = dsmr[9].value.toDouble();
+  energy_consumption_sum += dsmr[4].value.toDouble();
+  energy_production_sum += dsmr[5].value.toDouble();
+  if (counter == samples) {
+    power_consumption_calc_average = energy_consumption_sum/counter;
+    power_production_calc_average = energy_consumption_sum/counter;
+    counter = 0;
+    energy_consumption_sum = 0;
+    energy_consumption_sum = 0;    
+  }  
+  int delta_time = epoch_previous-epoch;
+  power_consumption_calculated = (energy_consumption_previous-energy_consumption)*3600/delta_time;
+  power_production_calculated = (energy_production_previous-energy_production)*3600/delta_time;
+  energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
+  energy_production_cumul_day = energy_production - energy_production_midnight;
+  power_excess_solar = power_production - power_consumption;
+  power_excess_solar_calc = power_production_calculated - power_consumption_calculated;  
+  Tb.log_ln("*****************");
+  Tb.log_ln(String(power_consumption_calculated));
+  Tb.log_ln(String(power_production_calculated));
+  Tb.log_ln(String(delta_time));
+  Tb.log_ln("*****************");
+  energy_consumption_previous = energy_consumption;
+  energy_production_previous = energy_production;
+  epoch_previous = t_of_day;
+  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
+    energy_consumption_midnight = energy_consumption;
+  }
+  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
+    energy_production_midnight = energy_production;
+  }
+  calculated_values[0] = energy_consumption;
+  calculated_values[1] = energy_production;
+  calculated_values[2] = power_consumption;
+  calculated_values[3] = power_production;  
+  calculated_values[4] = power_consumption_calculated;
+  calculated_values[5] = power_production_calculated;
+  calculated_values[6] = energy_consumption_cumul_day;
+  calculated_values[7] = energy_production_cumul_day;
+  calculated_values[8] = power_excess_solar;
+  calculated_values[9] = power_excess_solar_calc;
+  calculated_values[10] = power_consumption_calc_average;
+  calculated_values[11] = power_production_calc_average;  
+}*/
+
+/* Here we calculate power from energy, the energy/day and the excess solar power */
+void calculate_energy_and_power(double calculated_values[20], int samples) {  
+  struct tm t;
+  time_t t_of_day;
+  unsigned long epoch = 0;  
+  int delta_time = 0;
+  double energy_consumption = 0.0;
+  double energy_production = 0.0;
+  double power_consumption = 0.0;
+  double power_production = 0.0;
+  double power_c_L1 = 0.0;
+  double power_c_L2 = 0.0;
+  double power_c_L3 = 0.0;
+  double power_p_L1 = 0.0;
+  double power_p_L2 = 0.0;
+  double power_p_L3 = 0.0;
+  double power_consumption_calculated = 0.0;
+  double power_production_calculated = 0.0;
+  double power_excess_solar = 0.0;
+  double power_excess_solar_calc = 0.0;
+  double energy_consumption_cumul_day = 0.0;
+  double energy_production_cumul_day = 0.0;
+  double power_consumption_calc_average = 0.0;
+  double power_production_calc_average = 0.0;
+  static unsigned long epoch_previous = 0;
+  static int counter = 0; // needed to calculate average over samples
+  static double energy_consumption_sum = 0.0;
+  static double energy_production_sum = 0.0;  
+  static double energy_consumption_previous = dsmr[4].value.toDouble()*1000.0;
+  static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
+  static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
+  static double energy_production_midnight = dsmr[5].value.toDouble()*1000.0;  
+  // get the time of the day
+  t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
+  t.tm_mon = dsmr[2].value.substring(5,7).toInt();
+  t.tm_mday = dsmr[2].value.substring(8,10).toInt();
+  t.tm_hour = dsmr[2].value.substring(11,13).toInt();
+  t.tm_min = dsmr[2].value.substring(14,16).toInt();
+  t.tm_sec = dsmr[2].value.substring(17,19).toInt();
+  t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
+  t_of_day = mktime(&t);
+  
+  if (epoch_previous != 0) { //to skip the first call (static variables still 0)
+    
+    counter = counter + 1;    
+    Serial.print(String(counter) + "\t");
+    epoch = t_of_day;
+    delta_time = epoch_previous-epoch;
+    // get data in Wh resp. W
+    energy_consumption = dsmr[4].value.toDouble()*1000.0;  
+    energy_production = dsmr[5].value.toDouble()*1000.0;
+    power_consumption = dsmr[8].value.toDouble()*1000.0;
+    power_production = dsmr[9].value.toDouble()*1000.0;
+    power_consumption_calculated = (energy_consumption_previous-energy_consumption)*3600/delta_time;
+    power_production_calculated = (energy_production_previous-energy_production)*3600/delta_time;
+    energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
+    energy_production_cumul_day = energy_production - energy_production_midnight;
+    power_excess_solar = power_production - power_consumption;
+    power_excess_solar_calc = power_production_calculated - power_consumption_calculated;  
+    energy_consumption_previous = energy_consumption;
+    energy_production_previous = energy_production;
+    energy_consumption_sum += energy_consumption_previous-energy_consumption;
+    energy_production_sum += energy_production_previous-energy_production;
+    
+    
+    if (counter == samples) {
+      power_consumption_calc_average = (energy_consumption_sum*3600)/counter/delta_time;
+      power_production_calc_average = (energy_production_sum*3600)/counter/delta_time;
+      counter = 0;
+      energy_consumption_sum = 0;
+      energy_consumption_sum = 0;    
+    }  
+    
+    
+    
+      epoch_previous = t_of_day;  
+      if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
+        energy_consumption_midnight = energy_consumption;
+      }
+      if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
+        energy_production_midnight = energy_production;
+      }
+    calculated_values[0] = energy_consumption/1000.0; 
+    calculated_values[1] = energy_production/1000.0;
+    calculated_values[2] = power_consumption;
+    calculated_values[3] = power_production;  
+    calculated_values[4] = power_consumption_calculated;
+    calculated_values[5] = power_production_calculated;
+    calculated_values[6] = energy_consumption_cumul_day;
+    calculated_values[7] = energy_production_cumul_day;
+    calculated_values[8] = power_excess_solar;
+    calculated_values[9] = power_excess_solar_calc;
+    calculated_values[10] = power_consumption_calc_average;
+    calculated_values[11] = power_production_calc_average; 
+    Serial.print(String(calculated_values[0]) + "\t");
+    Serial.print(String(calculated_values[1]) + "\t");
+    Serial.print(String(calculated_values[2]) + "\t");
+    Serial.print(String(calculated_values[3]) + "\t");
+    Serial.print("PC cal " + String(calculated_values[4]) + "\t");
+    Serial.print("PP cal " + String(calculated_values[5]) + "\t"); 
+    Serial.print("EC_cum " + String(calculated_values[6]) + "\t");
+    Serial.print("EP cum " + String(calculated_values[7]) + "\t");
+    Serial.print("Exc. " + String(calculated_values[8]) + "\t");
+    Serial.print("Excess cal " + String(calculated_values[9]) + "\t");
+    Serial.print("PC av " + String(calculated_values[10]) + "\t");
+    Serial.print("PP av " + String(calculated_values[11]) + "\t");
+  
+    Serial.println();
+    
+  }  
+  else {    
+    epoch_previous = t_of_day;
+    Serial.println(epoch_previous);
+  }  
+}
+
+
+void decrypt_and_publish(int samples) {
   Tb.log_ln("-----------------------------------");
   Tb.log("Get data from Smarty and publish");
   print_raw_data(serial_data_length);  // for thorough debugging
@@ -508,12 +651,16 @@ void decrypt_and_publish() {
   print_vector(&Vector_SM);            // for thorough debugging
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
-    parse_dsmr_string(buffer);
-    #ifdef PUBLISH_ALL
-      mqtt_publish_all(PUBLISH_ALL); // 0 for simple string, 1 for json cooked
-    #else
-      mqtt_publish_energy_and_power();
-    #endif  
+    parse_dsmr_string(buffer);    
+    #ifdef PUBLISH_ALL_VALUES_ONLY
+      mqtt_publish_all(0); // 0 for values only
+    #endif // PUBLISH_ALL_VALUES_ONLY       
+    #ifdef PUBLISH_COOKED
+      mqtt_publish_cooked(samples);
+    #endif // PUBLISH_COOKED
+    #if not defined(PUBLISH_ALL_VALUES_ONLY) and not defined(PUBLISH_COOKED)
+      mqtt_publish_all(1); // 1 for json cooked
+    #endif  // use json    
     Tb.blink_led_x_times(4);
   }
   else {    //max datalength reached error!
