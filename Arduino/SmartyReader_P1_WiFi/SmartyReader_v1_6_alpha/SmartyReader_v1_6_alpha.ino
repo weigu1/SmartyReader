@@ -112,16 +112,18 @@
 
 /****** Arduino libraries needed ******/
 #ifdef USE_SECRETS
-  #include <secrets.h>
+  #include <secrets_1.h>
 #else  
   #include "config.h"      // most of the things you need to change are here
 #endif // USE_SECRETS  
 #include "ESPToolbox.h"  // ESP helper lib (more on weigu.lu)
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include <CircularBuffer.h>
 #include <Crypto.h>
 #include <AES.h>
 #include <GCM.h>
+#include <math.h>
 //#include <time.h>
 #ifdef BME280_I2C
   #include <Wire.h>
@@ -143,7 +145,7 @@ const char *WIFI_PASSWORD = MY_WIFI_PASSWORD;   // if no secrets file, use the c
 IPAddress UDP_LOG_PC_IP(UDP_LOG_PC_IP_BYTES);     // UDP logging if enabled in setup() (config.h)
 
 /****** MQTT settings ******/
-#define MQTT_MAX_PACKET_SIZE 512
+const int MQTT_MAXIMUM_PACKET_SIZE = 2048; // in setup()
 const short MQTT_PORT = MY_MQTT_PORT;
 WiFiClient espClient;
 #ifdef MQTTPASSWORD
@@ -153,8 +155,15 @@ WiFiClient espClient;
 
 PubSubClient MQTT_Client(espClient);
 String mqtt_msg;
-DynamicJsonDocument doc_out(1024);
-
+const int SAMPLES = SAMPLE_TIME_MIN*6;
+CircularBuffer<double,SAMPLES> ring_buffer_pc; 
+CircularBuffer<double,SAMPLES> ring_buffer_pc_l1;
+CircularBuffer<double,SAMPLES> ring_buffer_pc_l2;
+CircularBuffer<double,SAMPLES> ring_buffer_pc_l3;
+CircularBuffer<double,SAMPLES> ring_buffer_pp;
+CircularBuffer<double,SAMPLES> ring_buffer_pp_l1;
+CircularBuffer<double,SAMPLES> ring_buffer_pp_l2;
+CircularBuffer<double,SAMPLES> ring_buffer_pp_l3;
 
 ESPToolbox Tb;
 
@@ -189,74 +198,6 @@ struct Vector_GCM {
   size_t ivsize;
 };
 
-// DMSR variables
-struct Dsmr_field {
-  const byte nr;
-  const String name;
-  const String id;
-  const String unit;
-  String value;
-  const char type;  // string s, double f, integer i
-};
-
-// https://electris.lu/files/Dokumente_und_Formulare/Netz_Tech_Dokumente/SPEC_-_E-Meter_P1_specification_20210305.pdf
-
-Dsmr_field dsmr[] = {
-  {0,"identification", "", "","NA",'s'},
-  {1,"p1_version", "1-3:0.2.8", "","NA",'s'},
-  {2,"timestamp", "0-0:1.0.0", "","NA",'s'},
-  {3,"equipment_id", "0-0:42.0.0", "","NA",'s'},
-  {4,"act_energy_imported_p_plus", "1-0:1.8.0", "kWh","NA",'f'},
-  {5,"act_energy_exported_p_minus", "1-0:2.8.0", "kWh","NA",'f'},
-  {6,"react_energy_imported_q_plus", "1-0:3.8.0", "kvarh","NA",'f'},
-  {7,"react_energy_exported_q_minus", "1-0:4.8.0", "kvarh","NA",'f'},
-  {8,"act_pwr_imported_p_plus", "1-0:1.7.0", "kW","NA",'f'},
-  {9,"act_pwr_exported_p_minus", "1-0:2.7.0", "kW","NA",'f'},
-  {10,"react_pwr_imported_q_plus", "1-0:3.7.0", "kvar","NA",'f'},
-  {11,"react_pwr_exported_q_minus", "1-0:4.7.0", "kvar","NA",'f'},
-  {12,"active_threshold_smax", "0-0:17.0.0", "kVA","NA",'f'},
-  {13,"breaker_ctrl_state_0", "0-0:96.3.10", "","NA",'i'},
-  {14,"num_pwr_failures", "0-0:96.7.21", "","NA",'i'},
-  {15,"num_volt_sags_l1", "1-0:32.32.0", "","NA",'i'},
-  {16,"num_volt_sags_l2", "1-0:52.32.0", "","NA",'i'},
-  {17,"num_volt_sags_l3", "1-0:72.32.0", "","NA",'i'},
-  {18,"num_volt_swells_l1", "1-0:32.36.0", "","NA",'i'},
-  {19,"num_volt_swells_l2", "1-0:52.36.0", "","NA",'i'},
-  {20,"num_volt_swells_l3", "1-0:72.36.0", "","NA",'i'},
-  {21,"breaker_ctrl_state_0", "0-0:96.3.10", "","NA",'i'},
-  {22,"msg_long_e_meter", "0-0:96.13.0", "","NA",'s'},
-  {23,"msg_long_ch2", "0-0:96.13.2", "","NA",'s'},
-  {24,"msg_long_ch3", "0-0:96.13.3", "","NA",'s'},
-  {25,"msg_long_ch4", "0-0:96.13.4", "","NA",'s'},
-  {26,"msg_long_ch5", "0-0:96.13.5", "","NA",'s'},
-  {27,"curr_l1", "1-0:31.7.0", "A","NA",'f'},
-  {28,"curr_l2", "1-0:51.7.0", "A","NA",'f'},
-  {29,"curr_l3", "1-0:71.7.0", "A","NA",'f'},
-  {30,"act_pwr_imp_p_plus_l1", "1-0:21.7.0", "kW","NA",'f'},
-  {31,"act_pwr_imp_p_plus_l2", "1-0:41.7.0", "kW","NA",'f'},
-  {32,"act_pwr_imp_p_plus_l3", "1-0:61.7.0", "kW","NA",'f'},
-  {33,"act_pwr_exp_p_minus_l1", "1-0:22.7.0", "kW","NA",'f'},
-  {34,"act_pwr_exp_p_minus_l2", "1-0:42.7.0", "kW","NA",'f'},
-  {35,"act_pwr_exp_p_minus_l3", "1-0:62.7.0", "kW","NA",'f'},
-  {36,"react_pwr_imp_q_plus_l1", "1-0:23.7.0", "kvar","NA",'f'},
-  {37,"react_pwr_imp_q_plus_l2", "1-0:43.7.0", "kvar","NA",'f'},
-  {38,"react_pwr_imp_q_plus_l3", "1-0:63.7.0", "kvar","NA",'f'},
-  {39,"react_pwr_exp_q_minus_l1", "1-0:24.7.0", "kvar","NA",'f'},
-  {40,"react_pwr_exp_q_minus_l2", "1-0:44.7.0", "kvar","NA",'f'},
-  {41,"react_pwr_exp_q_minus_l3", "1-0:64.7.0", "kvar","NA",'f'},
-  {42,"apparent_export_pwr", "1-0:10.7.0", "kVA","NA",'f'},
-  {43,"apparent_import_pwr", "1-0:9.7.0", "kVA","NA",'f'},
-  {44,"breaker_ctrl_state_1", "0-1:96.3.10", "","NA",'i'},
-  {45,"breaker_ctrl_state_2", "0-2:96.3.10", "","NA",'i'},
-  {46,"limiter_curr_monitor", "1-1:31.4.0", "A","NA",'f'},
-  {47,"volt_l1", "1-0:32.7.0", "V","NA",'f'},
-  {48,"volt_l2", "1-0:52.7.0", "V","NA",'f'},
-  {49,"volt_l3", "1-0:72.7.0", "V","NA",'f'},
-  {50,"gas_index", "0-1:24.2.1", "m3","NA",'f'},
-  {51,"device_Type", "0-1:24.4.0", "", "NA",' '},
-  {52,"mbus_ch_sw_pos", "0-1:24.1.0", "", "NA",' '},
-  {53,"gas_meter_id_hex", "0-1:96.1.0", "", "NA",' '}, 
-};
 
 Vector_GCM Vector_SM;
 GCM<AES128> *gcmaes128 = 0;
@@ -269,7 +210,7 @@ void setup() {
   Tb.set_udp_log(true, UDP_LOG_PC_IP, UDP_LOG_PORT); // use "nc -kulw 0 6666"
   init_wifi();
   init_serial4smarty();
-  MQTT_Client.setBufferSize(512);
+  MQTT_Client.setBufferSize(MQTT_MAXIMUM_PACKET_SIZE);
   MQTT_Client.setServer(MQTT_SERVER,MQTT_PORT); //open connection to MQTT server
   mqtt_connect();
   #ifdef OTA
@@ -278,6 +219,8 @@ void setup() {
   memset(telegram, 0, MAX_SERIAL_STREAM_LENGTH);
   delay(2000); // give it some time
   Tb.blink_led_x_times(3);
+  Tb.log("arrayl: ");
+  Tb.log_ln(String(sizeof(calculated_parameter)/24));
 }
 
 /********** LOOP  **************************************************************/
@@ -286,10 +229,22 @@ void loop() {
   #ifdef OTA
     ArduinoOTA.handle();
   #endif // ifdef OTA
-  read_telegram();
-  if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
-    decrypt_and_publish(SAMPLES);
-  }
+  read_telegram();  
+  if ((telegram[0] == 0xdb) && (telegram[1] != 0) && (telegram[2] != 0)) {  //valid telegram
+    decrypt_and_calculate(SAMPLES);    
+    if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
+      #ifdef PUBLISH_ALL_VALUES_ONLY
+      mqtt_publish_all(0); // 0 for values only
+      #endif // PUBLISH_ALL_VALUES_ONLY             
+      #ifdef PUBLISH_COOKED        
+        mqtt_publish_cooked();
+      #endif // PUBLISH_COOKED
+      #if not defined(PUBLISH_ALL_VALUES_ONLY) and not defined(PUBLISH_COOKED)
+        mqtt_publish_all(1); // 1 for json cooked
+      #endif  // use json    
+      Tb.blink_led_x_times(4);
+    }
+  }  
   if (WiFi.status() != WL_CONNECTED) {  // if WiFi disconnected, reconnect
     init_wifi();
   }
@@ -297,6 +252,7 @@ void loop() {
     mqtt_connect();
   }
   MQTT_Client.loop();                    // make the MQTT live
+  
   yield();
 }
 
@@ -396,24 +352,16 @@ void mqtt_publish_all(boolean json) {
 }
 
 /**/
-void mqtt_publish_cooked(int samples) {
-  double calculated_values[20] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-  calculate_energy_and_power(calculated_values,samples);
-  String Sub_topic, Mqtt_msg = "";
-  doc_out[dsmr[2].name] = dsmr[2].value;
-  doc_out[dsmr[3].name] = dsmr[3].value;
-  doc_out["energy_consumption_kWh"] = calculated_values[0];  
-  doc_out["energy_consumption_cumul_day_kWh"] = calculated_values[6];
-  doc_out["energy_production_kWh"] = calculated_values[1];  
-  doc_out["energy_production_cumul_day_kWh"] = calculated_values[7];
-  doc_out["power_consumption_kW"] = calculated_values[2];  
-  doc_out["power_production_kW"] = calculated_values[3];
-  doc_out["power_consumption_calculated_kW"] = calculated_values[4];  
-  doc_out["power_production_calculated_kW"] = calculated_values[5];
-  doc_out["power_excess_solar_kW"] = calculated_values[8];
-  doc_out["power_excess_solar_calculated_kW"] = calculated_values[9];     
-  doc_out["power_consumption_calc_average_kW"] = calculated_values[10];
-  doc_out["power_production_calc_average_kW"] = calculated_values[11];
+void mqtt_publish_cooked() {  
+  DynamicJsonDocument doc_out(MQTT_MAXIMUM_PACKET_SIZE);
+  String Sub_topic, Mqtt_msg = "";  
+  doc_out["smarty_datetime"] = dsmr[2].value;
+  doc_out["smarty_id"] = dsmr[3].value;
+  for (byte i=0; i<(sizeof(calculated_parameter)/24); i++) {
+    if (calculated_parameter[i].publish == 'y') {
+      doc_out[calculated_parameter[i].name] = calculated_parameter[i].value;  
+    }
+  }  
   serializeJson(doc_out, Mqtt_msg);
   MQTT_Client.publish(MQTT_TOPIC_OUT.c_str(), Mqtt_msg.c_str());  
   Tb.log_ln("------------------");
@@ -437,7 +385,7 @@ void read_telegram() {
   #endif // OLD_HARDWARE
   while ((Serial.available()) && (serial_cnt < MAX_SERIAL_STREAM_LENGTH)) {
     telegram[serial_cnt] = Serial.read();
-    if (telegram[0] != 0xDB) {
+    if (telegram[0] != 0xDB) {      
       while (Serial.available() > 0) {Serial.read();} //clear the buffer!    
       break;
     }
@@ -448,112 +396,31 @@ void read_telegram() {
   }
 }
 
-/* Here we calculate power from energy, the energy/day and the excess solar power */
-/*void calculate_energy_and_power(double calculated_values[20], int samples) {  
-  struct tm t;
-  time_t t_of_day;
-  static double energy_consumption_previous = dsmr[4].value.toDouble();
-  static double energy_production_previous = dsmr[5].value.toDouble();
-  static double energy_consumption_midnight = dsmr[4].value.toDouble();
-  static double energy_production_midnight = dsmr[5].value.toDouble();  
-  static double energy_consumption_sum = 0;
-  static double energy_production_sum = 0;  
-  static int counter = 0; // needed to calculate average over samples
-  counter = counter + 1;
-  double power_consumption_calculated = 0;
-  double power_production_calculated = 0;
-  double power_excess_solar = 0;  
-  double power_excess_solar_calc = 0;
-  double energy_consumption_cumul_day = 0;
-  double energy_production_cumul_day = 0;
-  double power_consumption_calc_average = 0;
-  double power_production_calc_average = 0;  
-  t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
-  t.tm_mon = dsmr[2].value.substring(5,7).toInt();
-  t.tm_mday = dsmr[2].value.substring(8,10).toInt();
-  t.tm_hour = dsmr[2].value.substring(11,13).toInt();
-  t.tm_min = dsmr[2].value.substring(14,16).toInt();
-  t.tm_sec = dsmr[2].value.substring(17,19).toInt();
-  t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
-  t_of_day = mktime(&t);
-  static unsigned long epoch_previous = t_of_day;
-  unsigned long epoch = t_of_day;
-  double energy_consumption = dsmr[4].value.toDouble();
-  double energy_production = dsmr[5].value.toDouble();
-  double power_consumption = dsmr[8].value.toDouble();
-  double power_production = dsmr[9].value.toDouble();
-  energy_consumption_sum += dsmr[4].value.toDouble();
-  energy_production_sum += dsmr[5].value.toDouble();
-  if (counter == samples) {
-    power_consumption_calc_average = energy_consumption_sum/counter;
-    power_production_calc_average = energy_consumption_sum/counter;
-    counter = 0;
-    energy_consumption_sum = 0;
-    energy_consumption_sum = 0;    
-  }  
-  int delta_time = epoch_previous-epoch;
-  power_consumption_calculated = (energy_consumption_previous-energy_consumption)*3600/delta_time;
-  power_production_calculated = (energy_production_previous-energy_production)*3600/delta_time;
-  energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
-  energy_production_cumul_day = energy_production - energy_production_midnight;
-  power_excess_solar = power_production - power_consumption;
-  power_excess_solar_calc = power_production_calculated - power_consumption_calculated;  
-  Tb.log_ln("*****************");
-  Tb.log_ln(String(power_consumption_calculated));
-  Tb.log_ln(String(power_production_calculated));
-  Tb.log_ln(String(delta_time));
-  Tb.log_ln("*****************");
-  energy_consumption_previous = energy_consumption;
-  energy_production_previous = energy_production;
-  epoch_previous = t_of_day;
-  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-    energy_consumption_midnight = energy_consumption;
-  }
-  if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-    energy_production_midnight = energy_production;
-  }
-  calculated_values[0] = energy_consumption;
-  calculated_values[1] = energy_production;
-  calculated_values[2] = power_consumption;
-  calculated_values[3] = power_production;  
-  calculated_values[4] = power_consumption_calculated;
-  calculated_values[5] = power_production_calculated;
-  calculated_values[6] = energy_consumption_cumul_day;
-  calculated_values[7] = energy_production_cumul_day;
-  calculated_values[8] = power_excess_solar;
-  calculated_values[9] = power_excess_solar_calc;
-  calculated_values[10] = power_consumption_calc_average;
-  calculated_values[11] = power_production_calc_average;  
-}*/
 
 /* Here we calculate power from energy, the energy/day and the excess solar power */
-void calculate_energy_and_power(double calculated_values[20], int samples) {  
+void calculate_energy_and_power(int samples) {  
   struct tm t;
   time_t t_of_day;
   unsigned long epoch = 0;  
   int delta_time = 0;
-  double energy_consumption = 0.0;
-  double energy_production = 0.0;
-  double power_consumption = 0.0;
-  double power_production = 0.0;
-  double power_c_L1 = 0.0;
-  double power_c_L2 = 0.0;
-  double power_c_L3 = 0.0;
-  double power_p_L1 = 0.0;
-  double power_p_L2 = 0.0;
-  double power_p_L3 = 0.0;
-  double power_consumption_calculated = 0.0;
-  double power_production_calculated = 0.0;
-  double power_excess_solar = 0.0;
-  double power_excess_solar_calc = 0.0;
-  double energy_consumption_cumul_day = 0.0;
-  double energy_production_cumul_day = 0.0;
-  double power_consumption_calc_average = 0.0;
-  double power_production_calc_average = 0.0;
+  double energy_consumption = 0.0, energy_production = 0.0;
+  double power_consumption = 0.0, power_production = 0.0;
+  double power_consumption_calc_from_energy = 0.0, power_production_calc_from_energy = 0.0;
+  double power_consumption_l1 = 0.0, power_consumption_l2 = 0.0, power_consumption_l3 = 0.0;
+  double power_production_l1 = 0.0, power_production_l2 = 0.0, power_production_l3 = 0.0;    
+  double power_excess_solar = 0.0, power_l1_excess_solar = 0.0, power_l2_excess_solar = 0.0, power_l3_excess_solar = 0.0;  
+  double energy_consumption_cumul_day = 0.0, energy_production_cumul_day = 0.0;  
+  double power_consumption_calc_mean = 0.0, power_consumption_calc_max = 0.0, power_consumption_calc_min = 50000.0;  
+  double power_consumption_l1_calc_mean = 0.0, power_consumption_l1_calc_max = 0.0, power_consumption_l1_calc_min = 50000.0;  
+  double power_consumption_l2_calc_mean = 0.0, power_consumption_l2_calc_max = 0.0, power_consumption_l2_calc_min = 50000.0;  
+  double power_consumption_l3_calc_mean = 0.0, power_consumption_l3_calc_max = 0.0, power_consumption_l3_calc_min = 50000.0;    
+  double power_production_calc_mean = 0.0, power_production_calc_max = 0.0, power_production_calc_min = 50000.0;  
+  double power_production_l1_calc_mean = 0.0, power_production_l1_calc_max = 0.0, power_production_l1_calc_min = 50000.0;  
+  double power_production_l2_calc_mean = 0.0, power_production_l2_calc_max = 0.0, power_production_l2_calc_min = 50000.0;  
+  double power_production_l3_calc_mean = 0.0, power_production_l3_calc_max = 0.0, power_production_l3_calc_min = 50000.0;    
   static unsigned long epoch_previous = 0;
-  static int counter = 0; // needed to calculate average over samples
-  static double energy_consumption_sum = 0.0;
-  static double energy_production_sum = 0.0;  
+  static double power_consumption_sum = 0.0, power_consumption_l1_sum = 0.0, power_consumption_l2_sum = 0.0, power_consumption_l3_sum = 0.0;
+  static double power_production_sum = 0.0, power_production_l1_sum = 0.0, power_production_l2_sum = 0.0, power_production_l3_sum = 0.0;
   static double energy_consumption_previous = dsmr[4].value.toDouble()*1000.0;
   static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
   static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
@@ -567,74 +434,133 @@ void calculate_energy_and_power(double calculated_values[20], int samples) {
   t.tm_sec = dsmr[2].value.substring(17,19).toInt();
   t.tm_isdst = -1;        // Is DST on? 1 = yes, 0 = no, -1 = unknown
   t_of_day = mktime(&t);
-  
-  if (epoch_previous != 0) { //to skip the first call (static variables still 0)
-    
-    counter = counter + 1;    
-    Serial.print(String(counter) + "\t");
+  if (epoch_previous != 0) { //to skip the first call (static variables still 0)    
     epoch = t_of_day;
-    delta_time = epoch_previous-epoch;
+    delta_time = epoch-epoch_previous;
     // get data in Wh resp. W
     energy_consumption = dsmr[4].value.toDouble()*1000.0;  
     energy_production = dsmr[5].value.toDouble()*1000.0;
     power_consumption = dsmr[8].value.toDouble()*1000.0;
-    power_production = dsmr[9].value.toDouble()*1000.0;
-    power_consumption_calculated = (energy_consumption_previous-energy_consumption)*3600/delta_time;
-    power_production_calculated = (energy_production_previous-energy_production)*3600/delta_time;
+    power_production = dsmr[9].value.toDouble()*1000.0; 
+    power_consumption_l1 = dsmr[30].value.toDouble()*1000.0;
+    power_consumption_l2 = dsmr[31].value.toDouble()*1000.0;
+    power_consumption_l3 = dsmr[32].value.toDouble()*1000.0;
+    power_production_l1 = dsmr[33].value.toDouble()*1000.0; 
+    power_production_l2 = dsmr[34].value.toDouble()*1000.0; 
+    power_production_l3 = dsmr[35].value.toDouble()*1000.0;         
+    // calculate power_from_energy, cumul day and excess power       
+    power_consumption_calc_from_energy = (energy_consumption-energy_consumption_previous)*3600/delta_time;
+    power_production_calc_from_energy = (energy_production-energy_production_previous)*3600/delta_time;
     energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
     energy_production_cumul_day = energy_production - energy_production_midnight;
-    power_excess_solar = power_production - power_consumption;
-    power_excess_solar_calc = power_production_calculated - power_consumption_calculated;  
+    energy_consumption_cumul_day = constrain(energy_consumption_cumul_day,0, 70000); 
+    energy_production_cumul_day = constrain(energy_production_cumul_day,0, 70000); 
+    power_excess_solar = power_production - power_consumption;    
+    power_l1_excess_solar = power_production_l1 - power_consumption_l1;
+    power_l2_excess_solar = power_production_l2 - power_consumption_l2;
+    power_l3_excess_solar = power_production_l3 - power_consumption_l3;
+    // write to ringbuffer
+    ring_buffer_pc.push(power_consumption); 
+    ring_buffer_pc_l1.push(power_consumption_l1); 
+    ring_buffer_pc_l2.push(power_consumption_l2); 
+    ring_buffer_pc_l3.push(power_consumption_l3);     
+    ring_buffer_pp.push(power_production); 
+    ring_buffer_pp_l1.push(power_production_l1); 
+    ring_buffer_pp_l2.push(power_production_l2); 
+    ring_buffer_pp_l3.push(power_production_l3); 
+    // calculate mean, max and min for all powers
+    power_consumption_sum = 0.0;
+    power_consumption_l1_sum = 0.0;
+    power_consumption_l2_sum = 0.0;
+    power_consumption_l3_sum = 0.0;
+    power_production_sum = 0.0;
+    power_production_l1_sum = 0.0;
+    power_production_l2_sum = 0.0;
+    power_production_l3_sum = 0.0;    
+    for (byte i=0; i<samples; i++) {
+      power_consumption_sum += ring_buffer_pc[i];
+      power_consumption_calc_max = max(power_consumption_calc_max,ring_buffer_pc[i]);
+      power_consumption_calc_min = min(power_consumption_calc_min,ring_buffer_pc[i]);
+      power_consumption_l1_sum += ring_buffer_pc_l1[i];
+      power_consumption_l1_calc_max = max(power_consumption_l1_calc_max,ring_buffer_pc_l1[i]);
+      power_consumption_l1_calc_min = min(power_consumption_l1_calc_min,ring_buffer_pc_l1[i]);
+      power_consumption_l2_sum += ring_buffer_pc_l2[i];
+      power_consumption_l2_calc_max = max(power_consumption_l2_calc_max,ring_buffer_pc_l2[i]);
+      power_consumption_l2_calc_min = min(power_consumption_l2_calc_min,ring_buffer_pc_l2[i]);
+      power_consumption_l3_sum += ring_buffer_pc_l3[i];
+      power_consumption_l3_calc_max = max(power_consumption_l3_calc_max,ring_buffer_pc_l3[i]);
+      power_consumption_l3_calc_min = min(power_consumption_l3_calc_min,ring_buffer_pc_l3[i]);      
+      power_production_sum += ring_buffer_pp[i];
+      power_production_calc_max = max(power_production_calc_max,ring_buffer_pp[i]);
+      power_production_calc_min = min(power_production_calc_min,ring_buffer_pp[i]);
+      power_production_l1_sum += ring_buffer_pp_l1[i];
+      power_production_l1_calc_max = max(power_production_l1_calc_max,ring_buffer_pp_l1[i]);
+      power_production_l1_calc_min = min(power_production_l1_calc_min,ring_buffer_pp_l1[i]);
+      power_production_l2_sum += ring_buffer_pp_l2[i];
+      power_production_l2_calc_max = max(power_production_l2_calc_max,ring_buffer_pp_l2[i]);
+      power_production_l2_calc_min = min(power_production_l2_calc_min,ring_buffer_pp_l2[i]);
+      power_production_l3_sum += ring_buffer_pp_l3[i];
+      power_production_l3_calc_max = max(power_production_l3_calc_max,ring_buffer_pp_l3[i]);
+      power_production_l3_calc_min = min(power_production_l3_calc_min,ring_buffer_pp_l3[i]);      
+    }
+    power_consumption_calc_mean = round(power_consumption_sum/samples);
+    power_consumption_l1_calc_mean = round(power_consumption_l1_sum/samples);
+    power_consumption_l2_calc_mean = round(power_consumption_l2_sum/samples);
+    power_consumption_l3_calc_mean = round(power_consumption_l3_sum/samples);
+    power_production_calc_mean = round(power_production_sum/samples);
+    power_production_l1_calc_mean = round(power_production_l1_sum/samples);
+    power_production_l2_calc_mean = round(power_production_l2_sum/samples);
+    power_production_l3_calc_mean = round(power_production_l3_sum/samples);
+    epoch_previous = t_of_day;  
+    if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
+      energy_consumption_midnight = energy_consumption;
+      energy_production_midnight = energy_production;
+    }
     energy_consumption_previous = energy_consumption;
     energy_production_previous = energy_production;
-    energy_consumption_sum += energy_consumption_previous-energy_consumption;
-    energy_production_sum += energy_production_previous-energy_production;
-    
-    
-    if (counter == samples) {
-      power_consumption_calc_average = (energy_consumption_sum*3600)/counter/delta_time;
-      power_production_calc_average = (energy_production_sum*3600)/counter/delta_time;
-      counter = 0;
-      energy_consumption_sum = 0;
-      energy_consumption_sum = 0;    
-    }  
-    
-    
-    
-      epoch_previous = t_of_day;  
-      if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-        energy_consumption_midnight = energy_consumption;
-      }
-      if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
-        energy_production_midnight = energy_production;
-      }
-    calculated_values[0] = energy_consumption/1000.0; 
-    calculated_values[1] = energy_production/1000.0;
-    calculated_values[2] = power_consumption;
-    calculated_values[3] = power_production;  
-    calculated_values[4] = power_consumption_calculated;
-    calculated_values[5] = power_production_calculated;
-    calculated_values[6] = energy_consumption_cumul_day;
-    calculated_values[7] = energy_production_cumul_day;
-    calculated_values[8] = power_excess_solar;
-    calculated_values[9] = power_excess_solar_calc;
-    calculated_values[10] = power_consumption_calc_average;
-    calculated_values[11] = power_production_calc_average; 
-    Serial.print(String(calculated_values[0]) + "\t");
-    Serial.print(String(calculated_values[1]) + "\t");
-    Serial.print(String(calculated_values[2]) + "\t");
-    Serial.print(String(calculated_values[3]) + "\t");
-    Serial.print("PC cal " + String(calculated_values[4]) + "\t");
-    Serial.print("PP cal " + String(calculated_values[5]) + "\t"); 
-    Serial.print("EC_cum " + String(calculated_values[6]) + "\t");
-    Serial.print("EP cum " + String(calculated_values[7]) + "\t");
-    Serial.print("Exc. " + String(calculated_values[8]) + "\t");
-    Serial.print("Excess cal " + String(calculated_values[9]) + "\t");
-    Serial.print("PC av " + String(calculated_values[10]) + "\t");
-    Serial.print("PP av " + String(calculated_values[11]) + "\t");
-  
-    Serial.println();
-    
+      
+    calculated_parameter[0].value = energy_consumption/1000.0; 
+    calculated_parameter[1].value = energy_production/1000.0;    
+    calculated_parameter[2].value = energy_consumption_cumul_day;
+    calculated_parameter[3].value = energy_production_cumul_day;
+    calculated_parameter[4].value = power_consumption_calc_from_energy;    
+    calculated_parameter[5].value = power_production_calc_from_energy;
+    calculated_parameter[6].value = power_consumption;    
+    calculated_parameter[7].value = power_consumption_calc_mean;
+    calculated_parameter[8].value = power_consumption_calc_max;
+    calculated_parameter[9].value = power_consumption_calc_min;    
+    calculated_parameter[10].value = power_consumption_l1;
+    calculated_parameter[11].value = power_consumption_l1_calc_mean;
+    calculated_parameter[12].value = power_consumption_l1_calc_max;
+    calculated_parameter[13].value = power_consumption_l1_calc_min;
+    calculated_parameter[14].value = power_consumption_l2;
+    calculated_parameter[15].value = power_consumption_l2_calc_mean;
+    calculated_parameter[16].value = power_consumption_l2_calc_max;
+    calculated_parameter[17].value = power_consumption_l2_calc_min;
+    calculated_parameter[18].value = power_consumption_l3;    
+    calculated_parameter[19].value = power_consumption_l3_calc_mean;
+    calculated_parameter[20].value = power_consumption_l3_calc_max;
+    calculated_parameter[21].value = power_consumption_l3_calc_min;
+    calculated_parameter[22].value = power_production;    
+    calculated_parameter[23].value = power_production_calc_mean;
+    calculated_parameter[24].value = power_production_calc_max;
+    calculated_parameter[25].value = power_production_calc_min; 
+    calculated_parameter[26].value = power_production_l1;    
+    calculated_parameter[27].value = power_production_l1_calc_mean;
+    calculated_parameter[28].value = power_production_l1_calc_max;
+    calculated_parameter[29].value = power_production_l1_calc_min;     
+    calculated_parameter[30].value = power_production_l2;    
+    calculated_parameter[31].value = power_production_l2_calc_mean;
+    calculated_parameter[32].value = power_production_l2_calc_max;
+    calculated_parameter[33].value = power_production_l2_calc_min; 
+    calculated_parameter[34].value = power_production_l3;    
+    calculated_parameter[35].value = power_production_l3_calc_mean;
+    calculated_parameter[36].value = power_production_l3_calc_max;
+    calculated_parameter[37].value = power_production_l3_calc_min; 
+    calculated_parameter[38].value = power_excess_solar;
+    calculated_parameter[39].value = power_l1_excess_solar;
+    calculated_parameter[40].value = power_l2_excess_solar;
+    calculated_parameter[41].value = power_l3_excess_solar;
   }  
   else {    
     epoch_previous = t_of_day;
@@ -642,29 +568,19 @@ void calculate_energy_and_power(double calculated_values[20], int samples) {
   }  
 }
 
-
-void decrypt_and_publish(int samples) {
+void decrypt_and_calculate(int samples) {
   Tb.log_ln("-----------------------------------");
-  Tb.log("Get data from Smarty and publish");
-  print_raw_data(serial_data_length);  // for thorough debugging
+  Tb.log_ln("Decrypt and calculate");
+  //print_raw_data(serial_data_length);  // for thorough debugging
   init_vector(&Vector_SM,"Vector_SM", KEY_SMARTY, AUTH_DATA);
-  print_vector(&Vector_SM);            // for thorough debugging
+  //print_vector(&Vector_SM);            // for thorough debugging    
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
-    parse_dsmr_string(buffer);    
-    #ifdef PUBLISH_ALL_VALUES_ONLY
-      mqtt_publish_all(0); // 0 for values only
-    #endif // PUBLISH_ALL_VALUES_ONLY       
-    #ifdef PUBLISH_COOKED
-      mqtt_publish_cooked(samples);
-    #endif // PUBLISH_COOKED
-    #if not defined(PUBLISH_ALL_VALUES_ONLY) and not defined(PUBLISH_COOKED)
-      mqtt_publish_all(1); // 1 for json cooked
-    #endif  // use json    
-    Tb.blink_led_x_times(4);
+    parse_dsmr_string(buffer);  
+    calculate_energy_and_power(samples);  
   }
   else {    //max datalength reached error!
-    Tb.log_ln("error, serial stream too big");
+    Tb.log_ln("\nerror, serial stream too big");
     Tb.blink_led_x_times(10);
   }
 }
