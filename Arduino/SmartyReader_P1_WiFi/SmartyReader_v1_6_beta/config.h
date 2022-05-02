@@ -12,8 +12,6 @@ uint8_t KEY_SMARTY[] = {0xAE, 0xBD, 0x21, 0xB7, 0x69, 0xA6, 0xD1, 0x3C,
 /****** MQTT settings ******/
 const char *MQTT_SERVER = "192.168.178.222";
 
-
-
 /*+++++++ Things you can change: +++++++*/
 
 /****** Publishes every in milliseconds ******/
@@ -56,7 +54,7 @@ uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                        0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
                        0xFF};
 
-/*------ Things you can change: Define which variables are published ------*/
+/*------ Things you can change: Define which items are published ------*/
 
 // replace in the following tables 'y' with 'n' if you don't want to publish the parameter
 
