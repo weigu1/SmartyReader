@@ -1,4 +1,3 @@
-
 /*!!!!!! Things you must change: !!!!!!*/
 
 /****** WiFi SSID and PASSWORD ******/
@@ -12,6 +11,7 @@ uint8_t KEY_SMARTY[] = {0xAE, 0xBD, 0x21, 0xB7, 0x69, 0xA6, 0xD1, 0x3C,
 
 /****** MQTT settings ******/
 const char *MQTT_SERVER = "192.168.178.222";
+
 
 
 /*+++++++ Things you can change: +++++++*/
@@ -49,7 +49,7 @@ const byte NET_GATEWAY_BYTES[4] = {192, 168, 178, 1};
 const byte NET_MASK_BYTES[4] = {255,255,255,0};  
 
 // only if you use ethernet (uncomment //#define ETHERNET in ino file)
-const byte NET_MAC[6] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEG }; //only for ethernet
+const byte NET_MAC[6] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE }; //only for ethernet
 
 // Auth data: hard coded in Lux (no need to change it!) but not in Austria :)  (17 byte!)
 uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,

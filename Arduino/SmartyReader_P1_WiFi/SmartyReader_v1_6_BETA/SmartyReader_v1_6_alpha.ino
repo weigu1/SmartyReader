@@ -93,21 +93,21 @@
 
 /*!!!!!!!!!! to debug you can use the onboard LED, a second serial port on D4
              or best: UDP! Look in setup()                !!!!!!!!!*/
+             
+/*?????? Comment or uncomment the following lines suiting your needs ??????*/
 
-/*!!!!!!!!!! Comment or uncomment the following lines suiting your needs !!!!!!!!!*/
+/* The file "secrets.h" has to be placed in the sketchbook libraries folder
+   in a folder named "Secrets" and must contain the same things than the file config.h*/
+#define USE_SECRETS
+#define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
 //#define STATIC          // if static IP needed (no DHCP)
 //#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-#define OTA             // if Over The Air update needed (security risk!)
-/* The file "secrets.h" has to be placed in the sketchbook libraries folder
-   in a folder named "Secrets" and must contain the same things than the file config.h*/
-#define USE_SECRETS
 //#define BME280_I2C     // if you wanSmartyReader_v1_6_alphat to add a temp sensor to I2C connector
-/* power and energy and energy per day are published as JSON string,
-   Subscribe to topic/# (e.g. lamsmarty/#). For more data uncomment the following
-   line, then all the data is published (0 for normal string, 1 for json).*/
-//#define PUBLISH_ALL_VALUES_ONLY
+/* everything item (DSMR and calculated) is normally published under its own topic
+ * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
+ * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
 #define PUBLISH_COOKED
 
 /****** Arduino libraries needed ******/
@@ -232,16 +232,12 @@ void loop() {
   read_telegram();  
   if ((telegram[0] == 0xdb) && (telegram[1] != 0) && (telegram[2] != 0)) {  //valid telegram
     decrypt_and_calculate(SAMPLES);    
-    if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
-      #ifdef PUBLISH_ALL_VALUES_ONLY
-      mqtt_publish_all(0); // 0 for values only
-      #endif // PUBLISH_ALL_VALUES_ONLY             
+    if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME                
       #ifdef PUBLISH_COOKED        
         mqtt_publish_cooked();
+      #else
+        mqtt_publish_all();
       #endif // PUBLISH_COOKED
-      #if not defined(PUBLISH_ALL_VALUES_ONLY) and not defined(PUBLISH_COOKED)
-        mqtt_publish_all(1); // 1 for json cooked
-      #endif  // use json    
       Tb.blink_led_x_times(4);
     }
   }  
@@ -311,35 +307,27 @@ void init_serial4smarty() {
 }
 /********** MQTT functions **************************************************/
 
-void mqtt_publish_all(boolean json) {
+void mqtt_publish_all() {
   String Sub_topic, Mqtt_msg = "";
   uint8_t i;
+  // first DSMR data:
   for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
-    if (dsmr[i].value != "NA") {
-      if (json) {
-        if (dsmr[i].type == 'f') {
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toDouble();          
-        }
-        else if (dsmr[i].type == 'i') {
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":" + dsmr[i].value.toInt();
-        }
-        else { // string
-          Mqtt_msg = "{\"" + dsmr[i].name + "_value" + "\":\"" + dsmr[i].value;
-        }
-        if (dsmr[i].unit != "") {
-          Mqtt_msg = Mqtt_msg + ",\"" + dsmr[i].name + "_unit" + "\":\"" + dsmr[i].unit + "\"}";
-        }
-        else if (dsmr[i].type == 's') {
-          Mqtt_msg = Mqtt_msg + "\"}";
-        }
-        else {
-          Mqtt_msg = Mqtt_msg + "}";
-        }
+    if ((dsmr[i].value != "NA") && (dsmr[i].publish == 'y')) {
+      if (dsmr[i].type == 'f') {
+        Mqtt_msg = String(dsmr[i].value.toDouble());
+      }  
+      else if (dsmr[i].type == 'i') {
+        Mqtt_msg = String(dsmr[i].value.toInt());
+      }  
+      else {
+        Mqtt_msg = String(dsmr[i].value);
+      }  
+      if (dsmr[i].unit != "") {
+        Sub_topic = MQTT_TOPIC_OUT + '/' + dsmr[i].name + '_' + dsmr[i].unit;
       }
       else {
-        Mqtt_msg = dsmr[i].value;
-      }
-      Sub_topic = MQTT_TOPIC_OUT + '/' + dsmr[i].name;
+        Sub_topic = MQTT_TOPIC_OUT + '/' + dsmr[i].name;
+      }        
       MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
       Tb.log_ln("------------------");
       Tb.log("Published message: ");
@@ -348,6 +336,20 @@ void mqtt_publish_all(boolean json) {
     else {
       Tb.log_ln("error when publishing message (buffer big enough?)");
     }
+    
+  }
+  for (i=0; i < (sizeof calculated_parameter / sizeof calculated_parameter[0]); i++) {
+    if (calculated_parameter[i].publish == 'y') {
+      Mqtt_msg = String(calculated_parameter[i].value);
+      Sub_topic = MQTT_TOPIC_OUT + '/' + calculated_parameter[i].name;
+      MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+      Tb.log_ln("------------------");
+      Tb.log("Published message: ");
+      Tb.log_ln(Mqtt_msg);
+    }
+    else {
+      Tb.log_ln("error when publishing message (buffer big enough?)");
+    }  
   }
 }
 
