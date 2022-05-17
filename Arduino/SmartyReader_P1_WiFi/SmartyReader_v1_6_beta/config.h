@@ -16,9 +16,8 @@ const char *MQTT_SERVER = "192.168.178.222";
 
 /****** Publishes every in milliseconds ******/
 const long PUBLISH_TIME = 60000;
-
-const int SAMPLE_TIME_MIN = 10; // in the cooked version you can choose to get
-                                //  a mean value of the power over a certain time
+/****** Time used to calculate the mean, min and max values in minutes ******/
+const int SAMPLE_TIME_MIN = 10;
                                                     
 /****** MQTT settings ******/
 const char *MQTT_CLIENT_ID = "SmartyReader_LAM_1"; // this must be unique!!!
@@ -29,8 +28,8 @@ const char *MY_MQTT_USER = "me";
 const char *MY_MQTT_PASS = "meagain";
 
 /****** WiFi and network settings ******/
-const char *NET_MDNSNAME = "smartyReaderLAM";      // optional (access with SmartyReaderLAM.local)
-const char *NET_HOSTNAME = "smartyReaderLAM";      // optional
+const char *NET_MDNSNAME = "smartyReader";      // optional (access with SmartyReaderLAM.local)
+const char *NET_HOSTNAME = "smartyReader";      // optional
 const word UDP_LOG_PORT = 6666;                    // UDP logging settings if enabled in setup()
 const byte UDP_LOG_PC_IP_BYTES[4] = {192, 168, 1, 50};
 const char *NTP_SERVER = "lu.pool.ntp.org"; // NTP settings
@@ -38,8 +37,8 @@ const char *NTP_SERVER = "lu.pool.ntp.org"; // NTP settings
 const char *TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00";
 
 // only if you use OTA (uncomment //#define OTA in ino file)
-const char *MY_OTA_NAME = "smartyReaderLAM";                       // optional (access with SmartyReaderLAM.local)
-const char *MY_OTA_PASS_HASH = "d890e11b5e6a9fd74221ae65b1d39a3c"; //Hash for password: LetMeOTA2?
+const char *MY_OTA_NAME = "SmartyReader"; // optional (access with SmartyReader.local)
+const char *MY_OTA_PASS_HASH = "myhash";  // hash for password
 
 // only if you use a static address (uncomment //#define STATIC in ino file)
 const byte NET_LOCAL_IP_BYTES[4] = {192, 168, 178, 155};
@@ -54,7 +53,7 @@ uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
                        0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
                        0xFF};
 
-/*------ Things you can change: Define which items are published ------*/
+/*------ Things you can change: Define which parameter are published ------*/
 
 // replace in the following tables 'y' with 'n' if you don't want to publish the parameter
 
