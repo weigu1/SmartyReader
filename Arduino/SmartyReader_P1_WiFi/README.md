@@ -20,17 +20,17 @@ The main program (.ino) contains still the define lines that can be commented or
 
 + `OTA` will enable the Over The Air update possibility (security risk!). This comes handy to reprogram your SmartyReader while connected to the Smartmeter. In the config file you can change the name you see in the port menu of the Arduino IDE, and the password. To use a minimum of security we calculate an MD5 hash of our password, so that the password is not contained in cleartext in the Flash of the microcontroller. You can calculate MD5 hashes from a password with online tools.
 
-`OLD_HARDWARE` must be used for boards before V2.0, because here the serial signal is inverted with hardware (transistor) instead of software.
++ `OLD_HARDWARE` must be used for boards before V2.0, because here the serial signal is inverted with hardware (transistor) instead of software.
 
-`MQTTPASSWORD` enables an MQTT connection protected with a password (recommended!!). Check the config file to set the password.
++ `MQTTPASSWORD` enables an MQTT connection protected with a password (recommended!!). Check the config file to set the password.
 
-`STATIC` can be used if you want a static IP instead of a changing IP. The IP address is set in the config file.
++ `STATIC` can be used if you want a static IP instead of a changing IP. The IP address is set in the config file.
 
-`ETHERNET` if you don't want to use WiFi. For this you must add a Funduino (W5100) breakout board to your SmartyReader.
++ `ETHERNET` if you don't want to use WiFi. For this you must add a Funduino (W5100) breakout board to your SmartyReader.
 
-`BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topic....(not implemented yet)
++ `BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topic....(not implemented yet)
 
-`PUBLISH_COOKED` is used to get only one JSON string with all the calculated values. In this new version every item (DSMR and calculated) is published under its own topic. No more JSON strings but directly the values (easier to handle wit home automation software). In `config.h` (or secrets.h) you can decide with 'y/n' if you want to publish the parameter or not.
++ `PUBLISH_COOKED` is used to get only one JSON string with all the calculated values. In this new version every item (DSMR and calculated) is published under its own topic. No more JSON strings but directly the values (easier to handle wit home automation software). In `config.h` (or secrets.h) you can decide with 'y/n' if you want to publish the parameter or not.
 
 #### The config file (`config.h`). 
 
@@ -78,12 +78,19 @@ Smartmeter are balancing counter (german: saldierender Zähler). This can lead t
 If your solar plant is giving you 6&#8239;kW on 3 phases (L1, L2, L3), you get 2&#8239;kW per phase. If you are charging your EV at the same time with 4&#8239;kW on phase L1, the SmartyReader will show you the following values:
 
 `act_pwr_imported_p_plus` (1.7.0) = 2&#8239;kW
+
 `act_pwr_exported_p_minus` (2.7.0) = 4&#8239;kW
+
 `act_pwr_imp_p_plus_l1` (21.7.0) = 2&#8239;kW
+
 `act_pwr_imp_p_plus_l2"` (41.7.0) = 0&#8239;kW
+
 `act_pwr_imp_p_plus_l3"` (61.7.0) = 0&#8239;kW
+
 `act_pwr_exp_p_minus_l1` (22.7.0) = 0&#8239;kW
+
 `act_pwr_exp_p_minus_l2` (42.7.0) = 2&#8239;kW
+
 `act_pwr_exp_p_minus_l3` (62.7.0) = 2&#8239;kW
 
 But if we calculate the power from the energy values we see that in fact there is no energy imported and 2&#8239;kW are exported.
