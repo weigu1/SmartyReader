@@ -125,7 +125,7 @@ Dsmr_field dsmr[] = {
   {50,"gas_index", "0-1:24.2.1", "m3","NA",'f','y'},
   {51,"device_Type", "0-1:24.4.0", "", "NA",' ','y'},
   {52,"mbus_ch_sw_pos", "0-1:24.1.0", "", "NA",' ','y'},
-  {53,"gas_meter_id_hex", "0-1:96.1.0", "", "NA",' ','y'},
+  {53,"gas_meter_id_hex", "0-1:96.1.0", "", "NA",'s','y'},
 };
 
 // table with calculated values:
