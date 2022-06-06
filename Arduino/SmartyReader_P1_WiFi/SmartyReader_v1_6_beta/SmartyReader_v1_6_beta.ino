@@ -15,7 +15,7 @@
   V1.4 2020-06-24 enable line no more switched (10s data)
   V1.5 2021-04-26 for new boards V2.0 (PCB) without transistor
                   old hardware supported
-  V1.6 2021-08-12 Using config or secrets file for password, 3 new gas fields,
+  V1.6 2022-06-06 Using config or secrets file for password, 3 new gas fields,
                   BME280 suppport, changed ESPBacker to ESPToolbox, bugfixes
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
@@ -102,18 +102,18 @@
 #define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
-#define STATIC          // if static IP needed (no DHCP)
+//#define STATIC          // if static IP needed (no DHCP)
 //#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-//#define BME280_I2C      // if you wanSmartyReader_v1_6_alphat to add a temp sensor to I2C connector
+//#define BME280_I2C      // if you want to add a temp sensor to I2C connector
 #define GET_NTP_TIME    // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
  * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
-#define PUBLISH_COOKED
+//#define PUBLISH_COOKED
 
 /****** Arduino libraries needed ******/
 #ifdef USE_SECRETS
-  #include <secrets_1.h>
+  #include <secrets.h>
 #else  
   #include "config.h"      // most of the things you need to change are here
 #endif // USE_SECRETS  
