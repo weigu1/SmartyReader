@@ -102,9 +102,10 @@
 #define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
-//#define STATIC          // if static IP needed (no DHCP)
+#define STATIC          // if static IP needed (no DHCP)
 //#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-//#define BME280_I2C     // if you wanSmartyReader_v1_6_alphat to add a temp sensor to I2C connector
+//#define BME280_I2C      // if you wanSmartyReader_v1_6_alphat to add a temp sensor to I2C connector
+#define GET_NTP_TIME    // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
  * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
@@ -145,7 +146,6 @@ const char *WIFI_PASSWORD = MY_WIFI_PASSWORD;   // if no secrets file, use the c
 IPAddress UDP_LOG_PC_IP(UDP_LOG_PC_IP_BYTES);     // UDP logging if enabled in setup() (config.h)
 
 /****** MQTT settings ******/
-const int MQTT_MAXIMUM_PACKET_SIZE = 2048; // in setup()
 const short MQTT_PORT = MY_MQTT_PORT;
 WiFiClient espClient;
 #ifdef MQTTPASSWORD
@@ -155,6 +155,14 @@ WiFiClient espClient;
 
 PubSubClient MQTT_Client(espClient);
 String mqtt_msg;
+
+/******* BME280 ******/
+float temp(NAN), hum(NAN), pres(NAN);
+#ifdef BME280_I2C
+  BME280I2C bme;    // Default : forced mode, standby time = 1000 ms
+                    // Oversampling = pressure ×1, temperature ×1, humidity ×1, filter off,
+#endif
+
 const int SAMPLES = SAMPLE_TIME_MIN*6;
 CircularBuffer<double,SAMPLES> ring_buffer_pc; 
 CircularBuffer<double,SAMPLES> ring_buffer_pc_l1;
@@ -164,6 +172,7 @@ CircularBuffer<double,SAMPLES> ring_buffer_pp;
 CircularBuffer<double,SAMPLES> ring_buffer_pp_l1;
 CircularBuffer<double,SAMPLES> ring_buffer_pp_l2;
 CircularBuffer<double,SAMPLES> ring_buffer_pp_l3;
+CircularBuffer<double,SAMPLES> ring_buffer_es;
 
 ESPToolbox Tb;
 
@@ -198,7 +207,6 @@ struct Vector_GCM {
   size_t ivsize;
 };
 
-
 Vector_GCM Vector_SM;
 GCM<AES128> *gcmaes128 = 0;
 
@@ -216,7 +224,13 @@ void setup() {
   #ifdef OTA
     Tb.init_ota(OTA_NAME, OTA_PASS_HASH);
   #endif // ifdef OTA
+  #ifdef GET_NTP_TIME
+  Tb.init_ntp_time();
+  #endif // ifdef GET_NTP_TIME
   memset(telegram, 0, MAX_SERIAL_STREAM_LENGTH);
+  #ifdef BME280_I2C
+    init_bme280();     
+  #endif
   delay(2000); // give it some time
   Tb.blink_led_x_times(3);
   Tb.log("arrayl: ");
@@ -238,6 +252,10 @@ void loop() {
       #else
         mqtt_publish_all();
       #endif // PUBLISH_COOKED
+      
+      //#ifdef BME280_I2C
+
+      //#endif // BME280_I2C
       Tb.blink_led_x_times(4);
     }
   }  
@@ -310,7 +328,27 @@ void init_serial4smarty() {
 void mqtt_publish_all() {
   String Sub_topic, Mqtt_msg = "";
   uint8_t i;
-  // first DSMR data:
+    // if we want NTP time
+  #ifdef GET_NTP_TIME
+    Tb.get_time();   
+    Mqtt_msg = Tb.t.datetime;
+    Sub_topic = MQTT_TOPIC_OUT + '/' + "ntp_datetime";
+    MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+  #endif // GET_NTP_TIME  
+  // if we want BME280
+  #ifdef BME280_I2C
+    get_data_bme280();
+    Mqtt_msg = String((int)(temp*10.0 + 0.5)/10.0);
+    Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_temperature_C";
+    MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Mqtt_msg = String((int)(hum*10.0 + 0.5)/10.0);
+    Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_humidity_%";
+    MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Mqtt_msg = String((int)((pres + 5)/10)/10.0);
+    Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_pressure_hPa";
+    MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+  #endif // GET_NTP_TIME  
+  // DSMR data:
   for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
     if ((dsmr[i].value != "NA") && (dsmr[i].publish == 'y')) {
       if (dsmr[i].type == 'f') {
@@ -335,9 +373,9 @@ void mqtt_publish_all() {
     }
     else {
       Tb.log_ln("error when publishing message (buffer big enough?)");
-    }
-    
+    }    
   }
+  // calculated data
   for (i=0; i < (sizeof calculated_parameter / sizeof calculated_parameter[0]); i++) {
     if (calculated_parameter[i].publish == 'y') {
       Mqtt_msg = String(calculated_parameter[i].value);
@@ -350,20 +388,30 @@ void mqtt_publish_all() {
     else {
       Tb.log_ln("error when publishing message (buffer big enough?)");
     }  
-  }
+  }  
 }
 
 /**/
 void mqtt_publish_cooked() {  
   DynamicJsonDocument doc_out(MQTT_MAXIMUM_PACKET_SIZE);
   String Sub_topic, Mqtt_msg = "";  
+  #ifdef GET_NTP_TIME
+    Tb.get_time();    
+    doc_out["ntp_datetime"] = Tb.t.datetime;    
+  #endif // GET_NTP_TIME
+  #ifdef BME280_I2C
+    get_data_bme280();
+    doc_out["bme280_temperature_C"] = (int)(temp*10.0 + 0.5)/10.0;
+    doc_out["bme280_humidity_%"] = (int)(hum*10.0 + 0.5)/10.0;
+    doc_out["bme280_pressure_hPa"] = (int)((pres + 5)/10)/10.0;
+  #endif    
   doc_out["smarty_datetime"] = dsmr[2].value;
   doc_out["smarty_id"] = dsmr[3].value;
   for (byte i=0; i<(sizeof(calculated_parameter)/24); i++) {
     if (calculated_parameter[i].publish == 'y') {
       doc_out[calculated_parameter[i].name] = calculated_parameter[i].value;  
     }
-  }  
+  }    
   serializeJson(doc_out, Mqtt_msg);
   MQTT_Client.publish(MQTT_TOPIC_OUT.c_str(), Mqtt_msg.c_str());  
   Tb.log_ln("------------------");
@@ -411,6 +459,7 @@ void calculate_energy_and_power(int samples) {
   double power_consumption_l1 = 0.0, power_consumption_l2 = 0.0, power_consumption_l3 = 0.0;
   double power_production_l1 = 0.0, power_production_l2 = 0.0, power_production_l3 = 0.0;    
   double power_excess_solar = 0.0, power_l1_excess_solar = 0.0, power_l2_excess_solar = 0.0, power_l3_excess_solar = 0.0;  
+  double power_excess_solar_mean = 0.0, power_excess_solar_max = 0.0, power_excess_solar_min = 50000.0;  
   double energy_consumption_cumul_day = 0.0, energy_production_cumul_day = 0.0;  
   double power_consumption_calc_mean = 0.0, power_consumption_calc_max = 0.0, power_consumption_calc_min = 50000.0;  
   double power_consumption_l1_calc_mean = 0.0, power_consumption_l1_calc_max = 0.0, power_consumption_l1_calc_min = 50000.0;  
@@ -423,6 +472,7 @@ void calculate_energy_and_power(int samples) {
   static unsigned long epoch_previous = 0;
   static double power_consumption_sum = 0.0, power_consumption_l1_sum = 0.0, power_consumption_l2_sum = 0.0, power_consumption_l3_sum = 0.0;
   static double power_production_sum = 0.0, power_production_l1_sum = 0.0, power_production_l2_sum = 0.0, power_production_l3_sum = 0.0;
+  static double power_excess_solar_sum = 0.0;
   static double energy_consumption_previous = dsmr[4].value.toDouble()*1000.0;
   static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
   static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
@@ -457,7 +507,7 @@ void calculate_energy_and_power(int samples) {
     energy_production_cumul_day = energy_production - energy_production_midnight;
     energy_consumption_cumul_day = constrain(energy_consumption_cumul_day,0, 70000); 
     energy_production_cumul_day = constrain(energy_production_cumul_day,0, 70000); 
-    power_excess_solar = power_production - power_consumption;    
+    power_excess_solar = power_production - power_consumption;        
     power_l1_excess_solar = power_production_l1 - power_consumption_l1;
     power_l2_excess_solar = power_production_l2 - power_consumption_l2;
     power_l3_excess_solar = power_production_l3 - power_consumption_l3;
@@ -470,6 +520,7 @@ void calculate_energy_and_power(int samples) {
     ring_buffer_pp_l1.push(power_production_l1); 
     ring_buffer_pp_l2.push(power_production_l2); 
     ring_buffer_pp_l3.push(power_production_l3); 
+    ring_buffer_es.push(power_excess_solar); 
     // calculate mean, max and min for all powers
     power_consumption_sum = 0.0;
     power_consumption_l1_sum = 0.0;
@@ -478,7 +529,8 @@ void calculate_energy_and_power(int samples) {
     power_production_sum = 0.0;
     power_production_l1_sum = 0.0;
     power_production_l2_sum = 0.0;
-    power_production_l3_sum = 0.0;    
+    power_production_l3_sum = 0.0;
+    power_excess_solar_sum = 0.0;
     for (byte i=0; i<samples; i++) {
       power_consumption_sum += ring_buffer_pc[i];
       power_consumption_calc_max = max(power_consumption_calc_max,ring_buffer_pc[i]);
@@ -503,7 +555,10 @@ void calculate_energy_and_power(int samples) {
       power_production_l2_calc_min = min(power_production_l2_calc_min,ring_buffer_pp_l2[i]);
       power_production_l3_sum += ring_buffer_pp_l3[i];
       power_production_l3_calc_max = max(power_production_l3_calc_max,ring_buffer_pp_l3[i]);
-      power_production_l3_calc_min = min(power_production_l3_calc_min,ring_buffer_pp_l3[i]);      
+      power_production_l3_calc_min = min(power_production_l3_calc_min,ring_buffer_pp_l3[i]);            
+      power_excess_solar_sum += ring_buffer_es[i];
+      power_excess_solar_max = max(power_excess_solar_max,ring_buffer_es[i]);
+      power_excess_solar_min = min(power_excess_solar_min,ring_buffer_es[i]);      
     }
     power_consumption_calc_mean = round(power_consumption_sum/samples);
     power_consumption_l1_calc_mean = round(power_consumption_l1_sum/samples);
@@ -513,6 +568,7 @@ void calculate_energy_and_power(int samples) {
     power_production_l1_calc_mean = round(power_production_l1_sum/samples);
     power_production_l2_calc_mean = round(power_production_l2_sum/samples);
     power_production_l3_calc_mean = round(power_production_l3_sum/samples);
+    power_excess_solar_mean = round(power_excess_solar_sum/samples);
     epoch_previous = t_of_day;  
     if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
       energy_consumption_midnight = energy_consumption;
@@ -560,9 +616,12 @@ void calculate_energy_and_power(int samples) {
     calculated_parameter[36].value = power_production_l3_calc_max;
     calculated_parameter[37].value = power_production_l3_calc_min; 
     calculated_parameter[38].value = power_excess_solar;
-    calculated_parameter[39].value = power_l1_excess_solar;
-    calculated_parameter[40].value = power_l2_excess_solar;
-    calculated_parameter[41].value = power_l3_excess_solar;
+    calculated_parameter[39].value = power_excess_solar_mean;
+    calculated_parameter[40].value = power_excess_solar_max;
+    calculated_parameter[41].value = power_excess_solar_min;
+    calculated_parameter[42].value = power_l1_excess_solar;
+    calculated_parameter[43].value = power_l2_excess_solar;
+    calculated_parameter[44].value = power_l3_excess_solar;
   }  
   else {    
     epoch_previous = t_of_day;
@@ -676,6 +735,40 @@ void parse_dsmr_string(String Dmsr) {
     }
   }
 }
+
+/********** BME280 functions *************************************************/
+
+// initialise the BME280 sensor
+#ifdef BME280_I2C
+  void init_bme280() {
+    Wire.begin();
+    while(!bme.begin()) {
+      Tb.log_ln("Could not find BME280 sensor!");
+      delay(1000);
+    }
+    switch(bme.chipModel())  {
+       case BME280::ChipModel_BME280:
+         Tb.log_ln("Found BME280 sensor! Success.");
+         break;
+       case BME280::ChipModel_BMP280:
+         Tb.log_ln("Found BMP280 sensor! No Humidity available.");
+         break;
+       default:
+         Tb.log_ln("Found UNKNOWN sensor! Error!");
+    }
+  }
+
+// get BME280 data and log it
+void get_data_bme280() {
+  BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
+  BME280::PresUnit presUnit(BME280::PresUnit_Pa);
+  bme.read(pres, temp, hum, tempUnit, presUnit);
+  Tb.log_ln("Temp: " + (String(temp)) + " Hum: " + (String(hum)) + 
+           " Pres: " + (String(pres)));
+}
+#endif  // BME280_I2C
+
+
 /********** DEBUG functions ***************************************************/
 
 void print_raw_data(uint16_t serial_data_length) {

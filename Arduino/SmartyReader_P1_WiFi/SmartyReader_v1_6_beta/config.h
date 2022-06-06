@@ -176,8 +176,11 @@ calculated calculated_parameter[] = {
   {35,"power_production_l3_calc_mean_W",0.0,'y'},
   {36,"power_production_l3_calc_max_W",0.0,'y'},
   {37,"power_production_l3_calc_min_W",0.0,'y'},
-  {38,"power_calc_excess_solar_W",0.0,'y'},
-  {39,"power_calc_l1_excess_solar_W",0.0,'y'},
-  {40,"power_calc_l2_excess_solar_W",0.0,'y'},
-  {41,"power_calc_l3_excess_solar_W",0.0,'y'}
+  {38,"power_excess_solar_calc_W",0.0,'y'},
+  {39,"power_excess_solar_calc_mean_W",0.0,'y'},
+  {40,"power_excess_solar_calc_max_W",0.0,'y'},
+  {41,"power_excess_solar_calc_min_W",0.0,'y'},
+  {42,"power_excess_solar_l1_calc_W",0.0,'y'},
+  {43,"power_excess_solar_l2_calc_W",0.0,'y'},
+  {44,"power_excess_solar_l3_calc_W",0.0,'y'}
 };

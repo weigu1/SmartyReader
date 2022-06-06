@@ -28,7 +28,9 @@ The main program (.ino) contains still the define lines that can be commented or
 
 + `ETHERNET` if you don't want to use WiFi. For this you must add a Funduino (W5100) breakout board to your SmartyReader.
 
-+ `BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topic....(not implemented yet)
++ `BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topics "bme280_temperature_C", "bme280_humidity_%" and "bme280_pressure_hPa".
+
++ `GET_NTP_TIME` to add the the real time (from an NTP Server).
 
 + `PUBLISH_COOKED` is used to get only one JSON string with all the calculated values. In this new version every item (DSMR and calculated) is published under its own topic. No more JSON strings but directly the values (easier to handle wit home automation software). In `config.h` (or secrets.h) you can decide with 'y/n' if you want to publish the parameter or not.
 

@@ -9,6 +9,16 @@ void ESPToolbox::init_led() {
   led_on();
 }
 
+void ESPToolbox::init_ntp_time() {
+  #ifdef ESP8266
+    configTime(TZ_INFO, NTP_SERVER);
+  #else
+    configTime(0, 0, NTP_SERVER); // 0, 0 because we will use TZ in the next line
+    setenv("TZ", TZ_INFO, 1);     // set environment variable with your time zone
+    tzset();
+  #endif
+}
+
 // initialise Wlan for station
 void ESPToolbox::init_wifi_sta(const char *WIFI_SSID,
                               const char *WIFI_PASSWORD) {
@@ -235,6 +245,33 @@ bool ESPToolbox::get_udp_log() { return ESPToolbox::enable_udp_log; }
 // LED uses negative logic if true
 bool ESPToolbox::get_led_pos_logic() { return ESPToolbox::led_pos_logic; }
 
+void ESPToolbox::get_time() {
+      time(&now);                     // this function calls the NTP server only every hour
+      localtime_r(&now, &timeinfo);   // converts epoch time to tm structure
+      t.second  = timeinfo.tm_sec;
+      t.minute  = timeinfo.tm_min;
+      t.hour  = timeinfo.tm_hour;
+      t.day  = timeinfo.tm_mday;
+      t.month  = timeinfo.tm_mon + 1;    // beer (Andreas video)
+      t.year  = timeinfo.tm_year + 1900; // beer
+      t.weekday = timeinfo.tm_wday;
+      if (t.weekday == 0) {              // beer
+        t.weekday = 7;
+      }
+      t.yearday = timeinfo.tm_yday + 1;  // beer
+      t.daylight_saving_flag  = timeinfo.tm_isdst;
+      char buffer[25];
+      strftime(buffer, 25, "%A", localtime(&now));
+      t.name_of_day = String(buffer);
+      strftime(buffer, 25, "%B", localtime(&now));
+      t.name_of_month = String(buffer);
+      strftime(buffer, 25, "20%y-%m-%d", localtime(&now));
+      t.date = String(buffer);
+      strftime(buffer, 25, "%H:%M:%S", localtime(&now));
+      t.time = String(buffer);
+      strftime(buffer, 25, "20%y-%m-%dT%H:%M:%S", localtime(&now));
+      t.datetime = String(buffer);
+    }
 /****** SETTER functions ******************************************************/
 
 // set logger flag for LED
@@ -469,4 +506,21 @@ byte ESPToolbox::non_blocking_delay_x3(unsigned long ms_1, unsigned long ms_2, u
     return 3;
   }
   return 0;
+}
+
+void ESPToolbox::log_time_struct() {
+  log_ln("\nt.second: " + String(t.second));
+  log_ln("t.minute: " + String(t.minute));
+  log_ln("t.hour: " + String(t.hour));
+  log_ln("t.day: " + String(t.day));
+  log_ln("t.month: " + String(t.month));
+  log_ln("t.year: " + String(t.year));
+  log_ln("t.weekday: " + String(t.weekday));
+  log_ln("t.yearday: " + String(t.yearday));
+  log_ln("t.daylight_saving_flag: " + String(t.daylight_saving_flag));
+  log_ln("t.name_of_day: " + t.name_of_day);
+  log_ln("t.name_of_month: " + t.name_of_month);
+  log_ln("t.date: " + t.date);
+  log_ln("t.time: " + t.time);
+  log_ln("t.datetime: " + t.datetime);
 }

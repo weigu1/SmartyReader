@@ -27,11 +27,12 @@
 
 
 //#include <WebSocketsServer.h>
-#include <WiFiClientSecure.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <SPI.h>
 #include <Ethernet.h>
+
+
 
 /*#ifdef ESP8266
   WebSocketsServer ws_server(81);      // create a ws server on port 81
@@ -42,11 +43,32 @@
 
 class ESPToolbox {
   public:
+    const char *NTP_SERVER = "lu.pool.ntp.org";
+    const char *TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00";
+    time_t now = 0;
+    tm timeinfo; // time structure
+    struct My_Timeinfo {
+      byte second;
+      byte minute;
+      byte hour;
+      byte day;
+      byte month;
+      unsigned int year;
+      byte weekday;
+      unsigned int yearday;
+      bool daylight_saving_flag;
+      String name_of_day;
+      String name_of_month;
+      String date;
+      String time;
+      String datetime;
+    } t;
     String my_homepage;
 
     /****** INIT functions ****************************************************/
     void init_led(); // initialise the build in LED and switch it on
     // initialise WiFi, overloaded to add mDNS, hostname and local IP
+    void init_ntp_time();
     void init_wifi_sta(const char *WIFI_SSID, const char *WIFI_PASSWORD);
     void init_wifi_sta(const char *WIFI_SSID, const char *WIFI_PASSWORD,
                        const char *NET_MDNSNAME);
@@ -70,6 +92,7 @@ class ESPToolbox {
     bool get_serial_log();        // get logger flag for Serial
     bool get_udp_log();           // get logger flag for UDP
     bool get_led_pos_logic();     // LED uses positive logic if true
+    void get_time();
     /****** SETTER functions **************************************************/
     // set logger flag for Serial (LED_BUILTIN, positive logic)
     void set_led_log(bool flag);
@@ -109,6 +132,7 @@ class ESPToolbox {
     void blink_led_x_times(byte x, word delay_time_ms);
     bool non_blocking_delay(unsigned long milliseconds);
     byte non_blocking_delay_x3(unsigned long ms_1, unsigned long ms_2, unsigned long ms_3);
+    void log_time_struct();
 
   private:
     bool enable_led_log = false;
