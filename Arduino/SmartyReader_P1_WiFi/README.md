@@ -2,6 +2,26 @@
 
 ## The Software (MQTT via WiFi) to use with an ESP8266
 
+### Install Arduino and the libraries needed:
+
+The newer software uses my ESPToolbox lib, that is included in the sketch folder.
+
+First install the newest Arduino IDE (1.8.19). To use our ESP8266 LOLIN/WEMOS we add this line ```http://arduino.esp8266.com/stable/package_esp8266com_index.json``` to ```File-Preferences-Additional_Boards_Manager_URLs:```.
+
+Then we install support for ESP8266 boards by going to `Tools > Board: > Boards Manager...`. In the Manager window we type **esp8266** in the search field, select esp8266 and click on `install`. Close the window and choose the board `LOLIN/WEMOS D1 mini Pro` under `Tools > Board:` (you have to scroll).
+
+We need a the following libraries:
+
++ `Crypto` (Rhys Wheatherley)
++ `PubSubClient`  (by Nick O'Leary)
++ `ArduinoJson` (Benoit Blanchon)
++ `circular Buffer` (Roberto Lo Giacco)
++ `BME280` (Tyler Glenn); only if you use a BME280! 
+
+To install them go to `Tools > Manage Libraries...`. Type in the search field the name of the library, choose it and install it. Sometimes you have to scroll down to find the right lib.
+
+If you want to use the config `config.h` file uncomment `SECRETS`. If you want to use the a secret config file, create a folder named `Secrets` in the sketchbook libraries folder (`sketchbook/libraries`). Now copy the content of `config.h` to a file named `secrets.h`. Place this file in the `Secrets` folder.
+
 ### Version 1.6 Beta
 
 This new version got a lot of changes:
@@ -28,7 +48,7 @@ The main program (.ino) contains still the define lines that can be commented or
 
 + `ETHERNET` if you don't want to use WiFi. For this you must add a Funduino (W5100) breakout board to your SmartyReader.
 
-+ `BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topics "bme280_temperature_C", "bme280_humidity_%" and "bme280_pressure_hPa".
++ `BME280_I2C` to add a temperature sensor to your SmartyReader. The data is published under the topics "bme280_temperature_C", "bme280_humidity_%" and "bme280_pressure_hPa". Don't forget to solder two 1.8k resistors (0805, R5 and R6) to your board! 
 
 + `GET_NTP_TIME` to add the the real time (from an NTP Server).
 
@@ -42,7 +62,7 @@ The following things can be changed:
 
 + `PUBLISH_TIME`: in ms. The minimum is 10 seconds and it makes sense to use a multiple of this. A good value is 60000, to get data once a minute.
 
-+ `SAMPLE_TIME_MIN`: The mean value of the power and tne min and max values are calculated over this time. If we set this time to 10 min, 60 values are used to calculate the mean power.
++ `SAMPLE_TIME_MIN`: The mean value of the power and the min and max values are calculated over this time. If we set this time to 10 min, 60 values are used to calculate the mean power.
 
 + `MQTT`: The client ID must be unique, so change it if you use more than one SmartyReader!! Choose your own topic. User and Password is only needed if you uncommented `MQTTPASSWORD`. Default port is 1883.
 

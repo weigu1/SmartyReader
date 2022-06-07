@@ -98,7 +98,7 @@
 
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-#define USE_SECRETS
+//#define USE_SECRETS
 #define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)

@@ -20,6 +20,7 @@ const long PUBLISH_TIME = 60000;
 const int SAMPLE_TIME_MIN = 10;
                                                     
 /****** MQTT settings ******/
+const int MQTT_MAXIMUM_PACKET_SIZE = 2560; // look in setup()
 const char *MQTT_CLIENT_ID = "SmartyReader_LAM_1"; // this must be unique!!!
 String MQTT_TOPIC_OUT = "lamsmarty";                        
 const short MY_MQTT_PORT = 1883; // or 8883
