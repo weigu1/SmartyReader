@@ -120,7 +120,7 @@ But if we calculate the power from the energy values we see that in fact there i
 To calculate the power from energy we need two energy values (E1 and E2) and the time between these two values (&#916;t): P = (E2-E1)/&#916;t.
 
 Another solution is to calculate the difference between `act_pwr_imported_p_plus` (1.7.0) and `act_pwr_exported_p_minus` (2.7.0). 
-P = power exported - power imported. If this difference is positive we get an excess of solar power, and energy is only exported (no energy is imported). If it is negative, we consume energy.
+P = power exported - power imported. If this difference is positive we get an excess of solar power, and energy is only exported (no energy is imported). If it is negative (contrained to zero in software), we consume energy.
 
 ###### SmartyReader calculated values
 
