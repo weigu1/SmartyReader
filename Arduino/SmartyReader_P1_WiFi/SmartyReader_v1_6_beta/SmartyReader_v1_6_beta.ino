@@ -575,12 +575,11 @@ void calculate_energy_and_power(int samples) {
       energy_production_midnight = energy_production;
     }
     energy_consumption_previous = energy_consumption;
-    energy_production_previous = energy_production;
-      
+    energy_production_previous = energy_production;      
     calculated_parameter[0].value = energy_consumption/1000.0; 
     calculated_parameter[1].value = energy_production/1000.0;    
-    calculated_parameter[2].value = energy_consumption_cumul_day;
-    calculated_parameter[3].value = energy_production_cumul_day;
+    calculated_parameter[2].value = constrain(energy_consumption_cumul_day,0,100000);
+    calculated_parameter[3].value = constrain(energy_production_cumul_day,0,100000);
     calculated_parameter[4].value = power_consumption_calc_from_energy;    
     calculated_parameter[5].value = power_production_calc_from_energy;
     calculated_parameter[6].value = power_consumption;    
@@ -615,13 +614,13 @@ void calculate_energy_and_power(int samples) {
     calculated_parameter[35].value = power_production_l3_calc_mean;
     calculated_parameter[36].value = power_production_l3_calc_max;
     calculated_parameter[37].value = power_production_l3_calc_min; 
-    calculated_parameter[38].value = power_excess_solar;
-    calculated_parameter[39].value = power_excess_solar_mean;
-    calculated_parameter[40].value = power_excess_solar_max;
-    calculated_parameter[41].value = power_excess_solar_min;
-    calculated_parameter[42].value = power_l1_excess_solar;
-    calculated_parameter[43].value = power_l2_excess_solar;
-    calculated_parameter[44].value = power_l3_excess_solar;
+    calculated_parameter[38].value = constrain(power_excess_solar,0,30000);
+    calculated_parameter[39].value = constrain(power_excess_solar_mean,0,30000);
+    calculated_parameter[40].value = constrain(power_excess_solar_max,0,30000);
+    calculated_parameter[41].value = constrain(power_excess_solar_min,0,30000);
+    calculated_parameter[42].value = constrain(power_l1_excess_solar,0,30000);
+    calculated_parameter[43].value = constrain(power_l2_excess_solar,0,30000);
+    calculated_parameter[44].value = constrain(power_l3_excess_solar,0,30000);
   }  
   else {    
     epoch_previous = t_of_day;
