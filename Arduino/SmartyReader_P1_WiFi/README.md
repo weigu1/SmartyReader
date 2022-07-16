@@ -22,7 +22,7 @@ To install them go to `Tools > Manage Libraries...`. Type in the search field th
 
 If you want to use the config `config.h` file uncomment `SECRETS`. If you want to use the a secret config file, create a folder named `Secrets` in the sketchbook libraries folder (`sketchbook/libraries`). Now copy the content of `config.h` to a file named `secrets.h`. Place this file in the `Secrets` folder.
 
-### Version 1.6 Beta
+### Version 1.6
 
 This new version got a lot of changes:
 
