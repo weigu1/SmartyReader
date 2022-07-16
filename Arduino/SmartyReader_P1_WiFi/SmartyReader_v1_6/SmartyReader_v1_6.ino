@@ -99,13 +99,13 @@
 
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-#define USE_SECRETS
+//#define USE_SECRETS
 #define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
-#define STATIC          // if static IP needed (no DHCP)
-#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-#define BME280_I2C      // if you want to add a temp sensor to I2C connector
+//#define STATIC          // if static IP needed (no DHCP)
+//#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
+//#define BME280_I2C      // if you want to add a temp sensor to I2C connector
 #define GET_NTP_TIME    // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
