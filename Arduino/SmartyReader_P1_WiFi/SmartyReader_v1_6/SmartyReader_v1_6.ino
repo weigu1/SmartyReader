@@ -15,8 +15,9 @@
   V1.4 2020-06-24 enable line no more switched (10s data)
   V1.5 2021-04-26 for new boards V2.0 (PCB) without transistor
                   old hardware supported
-  V1.6 2022-06-06 Using config or secrets file for password, 3 new gas fields,
-                  BME280 suppport, changed ESPBacker to ESPToolbox, bugfixes
+  V1.6 2022-07-16 Using config or secrets file for password, 3 new gas fields,
+                  BME280 suppport, changed ESPBacker to ESPToolbox,
+                  added Ethernet, bugfixes
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
 
@@ -98,13 +99,13 @@
 
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-//#define USE_SECRETS
+#define USE_SECRETS
 #define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
-//#define STATIC          // if static IP needed (no DHCP)
-//#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-//#define BME280_I2C      // if you want to add a temp sensor to I2C connector
+#define STATIC          // if static IP needed (no DHCP)
+#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
+#define BME280_I2C      // if you want to add a temp sensor to I2C connector
 #define GET_NTP_TIME    // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
@@ -134,26 +135,31 @@
 /****** WiFi and network settings ******/
 const char *WIFI_SSID = MY_WIFI_SSID;           // if no secrets file, use the config.h file
 const char *WIFI_PASSWORD = MY_WIFI_PASSWORD;   // if no secrets file, use the config.h file
+#if defined(STATIC) || defined(ETHERNET)
+  IPAddress NET_LOCAL_IP (NET_LOCAL_IP_BYTES);  // 3x optional for static IP
+  IPAddress NET_GATEWAY (NET_GATEWAY_BYTES);    // look in config.h
+  IPAddress NET_MASK (NET_MASK_BYTES);
+  IPAddress NET_DNS (NET_MASK_BYTES);
+#endif // #if defined(STATIC) || defined(ETHERNET)
 #ifdef OTA                                // Over The Air update settings
   const char *OTA_NAME = MY_OTA_NAME;
   const char *OTA_PASS_HASH = MY_OTA_PASS_HASH;  // use the config.h file
-#endif // ifdef OTA      
-#ifdef STATIC
-  IPAddress NET_LOCAL_IP (NET_LOCAL_IP_BYTES);    // 3x optional for static IP
-  IPAddress NET_GATEWAY (NET_GATEWAY_BYTES);      // look in config.h
-  IPAddress NET_MASK (NET_MASK_BYTES);  
-#endif // ifdef STATIC
+#endif // ifdef OTA
+
 IPAddress UDP_LOG_PC_IP(UDP_LOG_PC_IP_BYTES);     // UDP logging if enabled in setup() (config.h)
 
 /****** MQTT settings ******/
 const short MQTT_PORT = MY_MQTT_PORT;
-WiFiClient espClient;
+#ifdef ETHERNET
+  EthernetClient espClient;
+#else
+  WiFiClient espClient;
+#endif // ifdef ETHERNET
+PubSubClient MQTT_Client(espClient);
 #ifdef MQTTPASSWORD
   const char *MQTT_USER = MY_MQTT_USER;
   const char *MQTT_PASS = MY_MQTT_PASS;
 #endif // MQTTPASSWORD
-
-PubSubClient MQTT_Client(espClient);
 String mqtt_msg;
 
 /******* BME280 ******/
@@ -216,7 +222,21 @@ void setup() {
   Tb.set_led_log(true);                 // use builtin LED for debugging
   Tb.set_serial_log(true,1);           // 2 parameter = interface (1 = Serial1)
   Tb.set_udp_log(true, UDP_LOG_PC_IP, UDP_LOG_PORT); // use "nc -kulw 0 6666"
-  init_wifi();
+  #ifdef STATIC
+    Tb.set_static_ip(true,NET_LOCAL_IP, NET_GATEWAY, NET_MASK, NET_DNS);
+  #endif // ifdef STATIC
+  #ifdef STATIC
+    Tb.set_static_ip(true,NET_LOCAL_IP, NET_GATEWAY, NET_MASK, NET_DNS);
+  #endif // ifdef STATIC
+  #ifdef ETHERNET
+    Tb.set_ethernet(true);
+    Tb.init_eth(NET_MAC);
+  #else
+    Tb.init_wifi_sta(WIFI_SSID, WIFI_PASSWORD, NET_MDNSNAME, NET_HOSTNAME);
+  #endif // ifdef ETHERNET
+  #ifdef GET_NTP_TIME
+    Tb.init_ntp_time();
+  #endif // ifdef GET_NTP_TIME
   init_serial4smarty();
   MQTT_Client.setBufferSize(MQTT_MAXIMUM_PACKET_SIZE);
   MQTT_Client.setServer(MQTT_SERVER,MQTT_PORT); //open connection to MQTT server
@@ -224,17 +244,12 @@ void setup() {
   #ifdef OTA
     Tb.init_ota(OTA_NAME, OTA_PASS_HASH);
   #endif // ifdef OTA
-  #ifdef GET_NTP_TIME
-  Tb.init_ntp_time();
-  #endif // ifdef GET_NTP_TIME
   memset(telegram, 0, MAX_SERIAL_STREAM_LENGTH);
   #ifdef BME280_I2C
     init_bme280();     
   #endif
   delay(2000); // give it some time
   Tb.blink_led_x_times(3);
-  Tb.log("arrayl: ");
-  Tb.log_ln(String(sizeof(calculated_parameter)/24));
 }
 
 /********** LOOP  **************************************************************/
@@ -246,22 +261,25 @@ void loop() {
   read_telegram();  
   if ((telegram[0] == 0xdb) && (telegram[1] != 0) && (telegram[2] != 0)) {  //valid telegram
     decrypt_and_calculate(SAMPLES);    
-    if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME                
+    if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
+      Tb.log("HuHu");
       #ifdef PUBLISH_COOKED        
         mqtt_publish_cooked();
       #else
         mqtt_publish_all();
       #endif // PUBLISH_COOKED
-      
-      //#ifdef BME280_I2C
-
-      //#endif // BME280_I2C
       Tb.blink_led_x_times(4);
     }
   }  
-  if (WiFi.status() != WL_CONNECTED) {  // if WiFi disconnected, reconnect
-    init_wifi();
-  }
+  #ifdef ETHERNET
+    if (!espClient.connected()) {
+      Tb.init_eth(NET_MAC);
+    }
+  #else
+    if (WiFi.status() != WL_CONNECTED) {   // if WiFi disconnected, reconnect
+      Tb.init_wifi_sta(WIFI_SSID, WIFI_PASSWORD, NET_MDNSNAME, NET_HOSTNAME);
+    }
+  #endif // ifdef ETHERNET
   if (!MQTT_Client.connected()) { // reconnect mqtt client, if needed
     mqtt_connect();
   }
@@ -271,15 +289,6 @@ void loop() {
 }
 
 /********** INIT functions ****************************************************/
-
-void init_wifi() {
-  #ifdef STATIC
-    Tb.init_wifi_sta(WIFI_SSID, WIFI_PASSWORD, NET_HOSTNAME, NET_LOCAL_IP,
-                  NET_GATEWAY, NET_MASK);
-  #else
-    Tb.init_wifi_sta(WIFI_SSID, WIFI_PASSWORD, NET_MDNSNAME, NET_HOSTNAME);
-  #endif // ifdef STATIC
-}
 
 // connect to MQTT server
 void mqtt_connect() {
@@ -328,12 +337,13 @@ void init_serial4smarty() {
 void mqtt_publish_all() {
   String Sub_topic, Mqtt_msg = "";
   uint8_t i;
-    // if we want NTP time
+  // if we want NTP time
   #ifdef GET_NTP_TIME
     Tb.get_time();   
     Mqtt_msg = Tb.t.datetime;
     Sub_topic = MQTT_TOPIC_OUT + '/' + "ntp_datetime";
     MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Tb.log_ln("Published message (NTP): " + Sub_topic + "   " + Mqtt_msg);    
   #endif // GET_NTP_TIME  
   // if we want BME280
   #ifdef BME280_I2C
@@ -341,15 +351,18 @@ void mqtt_publish_all() {
     Mqtt_msg = String((int)(temp*10.0 + 0.5)/10.0);
     Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_temperature_C";
     MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Tb.log_ln("Published message (BME280): " + Sub_topic + "   " + Mqtt_msg);
     Mqtt_msg = String((int)(hum*10.0 + 0.5)/10.0);
     Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_humidity_%";
     MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Tb.log_ln("Published message (BME280): " + Sub_topic + "   " + Mqtt_msg);
     Mqtt_msg = String((int)((pres + 5)/10)/10.0);
     Sub_topic = MQTT_TOPIC_OUT + '/' + "bme280_pressure_hPa";
     MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
+    Tb.log_ln("Published message (BME280): " + Sub_topic + "   " + Mqtt_msg);    
   #endif // GET_NTP_TIME  
   // DSMR data:
-  for (i=1; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
+  for (i=2; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
     if ((dsmr[i].value != "NA") && (dsmr[i].publish == 'y')) {
       if (dsmr[i].type == 'f') {
         Mqtt_msg = String(dsmr[i].value.toDouble());
@@ -366,13 +379,11 @@ void mqtt_publish_all() {
       else {
         Sub_topic = MQTT_TOPIC_OUT + '/' + dsmr[i].name;
       }        
-      MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
-      Tb.log_ln("------------------");
-      Tb.log("Published message: ");
-      Tb.log_ln(Mqtt_msg);
+      MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());      
+      Tb.log_ln("Published message (Smartmeter field nr " + String(i) + "): " + Sub_topic + "   " + Mqtt_msg);
     }
     else {
-      Tb.log_ln("error when publishing message (buffer big enough?)");
+      Tb.log_ln("No value for DMSR field nr: " + String(i) + " or shall not be published (no ''y'' in config.h).");
     }    
   }
   // calculated data
@@ -381,13 +392,11 @@ void mqtt_publish_all() {
       Mqtt_msg = String(calculated_parameter[i].value);
       Sub_topic = MQTT_TOPIC_OUT + '/' + calculated_parameter[i].name;
       MQTT_Client.publish(Sub_topic.c_str(), Mqtt_msg.c_str());
-      Tb.log_ln("------------------");
-      Tb.log("Published message: ");
-      Tb.log_ln(Mqtt_msg);
+      Tb.log_ln("Published message (Calculated field nr " + String(i) + "): " + Sub_topic + "   " + Mqtt_msg);
     }
     else {
-      Tb.log_ln("error when publishing message (buffer big enough?)");
-    }  
+      Tb.log_ln("No value for Calculated field nr: " + String(i) + " or shall not be published (no ''y'' in config.h).");
+    }          
   }  
 }
 
@@ -414,9 +423,7 @@ void mqtt_publish_cooked() {
   }    
   serializeJson(doc_out, Mqtt_msg);
   MQTT_Client.publish(MQTT_TOPIC_OUT.c_str(), Mqtt_msg.c_str());  
-  Tb.log_ln("------------------");
-  Tb.log("Published message: ");
-  Tb.log_ln(Mqtt_msg);
+  Tb.log_ln("Published message (Smartmeter): " + Sub_topic + "   " + Mqtt_msg);  
 }
 
 
@@ -762,8 +769,8 @@ void get_data_bme280() {
   BME280::TempUnit tempUnit(BME280::TempUnit_Celsius);
   BME280::PresUnit presUnit(BME280::PresUnit_Pa);
   bme.read(pres, temp, hum, tempUnit, presUnit);
-  Tb.log_ln("Temp: " + (String(temp)) + " Hum: " + (String(hum)) + 
-           " Pres: " + (String(pres)));
+  Tb.log_ln("BME 280: Temp = " + (String(temp)) + "C Hum = " + (String(hum)) + 
+           "% Pres = " + (String(pres)) + "hPA");
 }
 #endif  // BME280_I2C
 

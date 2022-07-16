@@ -45,9 +45,10 @@ const char *MY_OTA_PASS_HASH = "myhash";  // hash for password
 const byte NET_LOCAL_IP_BYTES[4] = {192, 168, 178, 155};
 const byte NET_GATEWAY_BYTES[4] = {192, 168, 178, 1};
 const byte NET_MASK_BYTES[4] = {255,255,255,0};  
+const byte NET_DNS_BYTES[4] = {8,8,8,8}; //  second dns (first = gateway), 8.8.8.8 = google
 
 // only if you use ethernet (uncomment //#define ETHERNET in ino file)
-const byte NET_MAC[6] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xEE }; //only for ethernet
+byte NET_MAC[6] = {0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0x01};  // for ethernet (e.g. Funduino board with W5100)
 
 // Auth data: hard coded in Lux (no need to change it!) but not in Austria :)  (17 byte!)
 uint8_t AUTH_DATA[] = {0x30, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66,
