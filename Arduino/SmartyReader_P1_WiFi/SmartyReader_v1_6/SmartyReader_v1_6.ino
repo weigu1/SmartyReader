@@ -100,7 +100,7 @@
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
 //#define USE_SECRETS
-#define OTA               // if Over The Air update needed (security risk!)
+//#define OTA               // if Over The Air update needed (security risk!)
 //#define OLD_HARDWARE    // for the boards before V2.0
 //#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
 //#define STATIC          // if static IP needed (no DHCP)
@@ -362,7 +362,7 @@ void mqtt_publish_all() {
     Tb.log_ln("Published message (BME280): " + Sub_topic + "   " + Mqtt_msg);    
   #endif // GET_NTP_TIME  
   // DSMR data:
-  for (i=2; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
+  for (i=0; i < (sizeof dsmr / sizeof dsmr[0]); i++) {
     if ((dsmr[i].value != "NA") && (dsmr[i].publish == 'y')) {
       if (dsmr[i].type == 'f') {
         Mqtt_msg = String(dsmr[i].value.toDouble());
@@ -460,14 +460,14 @@ void calculate_energy_and_power(int samples) {
   time_t t_of_day;
   unsigned long epoch = 0;  
   int delta_time = 0;
-  double energy_consumption = 0.0, energy_production = 0.0;
+  double energy_consumption = 0.0, energy_production = 0.0, gas_consumption = 0.0;
   double power_consumption = 0.0, power_production = 0.0;
   double power_consumption_calc_from_energy = 0.0, power_production_calc_from_energy = 0.0;
   double power_consumption_l1 = 0.0, power_consumption_l2 = 0.0, power_consumption_l3 = 0.0;
   double power_production_l1 = 0.0, power_production_l2 = 0.0, power_production_l3 = 0.0;    
   double power_excess_solar = 0.0, power_l1_excess_solar = 0.0, power_l2_excess_solar = 0.0, power_l3_excess_solar = 0.0;  
   double power_excess_solar_mean = 0.0, power_excess_solar_max = 0.0, power_excess_solar_min = 50000.0;  
-  double energy_consumption_cumul_day = 0.0, energy_production_cumul_day = 0.0;  
+  double energy_consumption_cumul_day = 0.0, energy_production_cumul_day = 0.0, gas_consumption_cumul_day;  
   double power_consumption_calc_mean = 0.0, power_consumption_calc_max = 0.0, power_consumption_calc_min = 50000.0;  
   double power_consumption_l1_calc_mean = 0.0, power_consumption_l1_calc_max = 0.0, power_consumption_l1_calc_min = 50000.0;  
   double power_consumption_l2_calc_mean = 0.0, power_consumption_l2_calc_max = 0.0, power_consumption_l2_calc_min = 50000.0;  
@@ -484,6 +484,7 @@ void calculate_energy_and_power(int samples) {
   static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
   static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
   static double energy_production_midnight = dsmr[5].value.toDouble()*1000.0;  
+  static double gas_consumption_midnight = dsmr[50].value.toDouble();  
   // get the time of the day
   t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
   t.tm_mon = dsmr[2].value.substring(5,7).toInt();
@@ -506,12 +507,14 @@ void calculate_energy_and_power(int samples) {
     power_consumption_l3 = dsmr[32].value.toDouble()*1000.0;
     power_production_l1 = dsmr[33].value.toDouble()*1000.0; 
     power_production_l2 = dsmr[34].value.toDouble()*1000.0; 
-    power_production_l3 = dsmr[35].value.toDouble()*1000.0;         
+    power_production_l3 = dsmr[35].value.toDouble()*1000.0; 
+    gas_consumption = dsmr[50].value.toDouble();
     // calculate power_from_energy, cumul day and excess power       
     power_consumption_calc_from_energy = (energy_consumption-energy_consumption_previous)*3600/delta_time;
     power_production_calc_from_energy = (energy_production-energy_production_previous)*3600/delta_time;
     energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
-    energy_production_cumul_day = energy_production - energy_production_midnight;
+    energy_production_cumul_day = energy_production - energy_production_midnight;    
+    gas_consumption_cumul_day = gas_consumption - gas_consumption_midnight;    
     energy_consumption_cumul_day = constrain(energy_consumption_cumul_day,0, 70000); 
     energy_production_cumul_day = constrain(energy_production_cumul_day,0, 70000); 
     power_excess_solar = power_production - power_consumption;        
@@ -580,6 +583,7 @@ void calculate_energy_and_power(int samples) {
     if ((t.tm_hour == 23) && (t.tm_min >= 55)) {
       energy_consumption_midnight = energy_consumption;
       energy_production_midnight = energy_production;
+      gas_consumption_midnight = gas_consumption;
     }
     energy_consumption_previous = energy_consumption;
     energy_production_previous = energy_production;      
@@ -627,7 +631,9 @@ void calculate_energy_and_power(int samples) {
     calculated_parameter[41].value = constrain(power_excess_solar_min,0,30000);
     calculated_parameter[42].value = constrain(power_l1_excess_solar,0,30000);
     calculated_parameter[43].value = constrain(power_l2_excess_solar,0,30000);
-    calculated_parameter[44].value = constrain(power_l3_excess_solar,0,30000);
+    calculated_parameter[44].value = constrain(power_l3_excess_solar,0,30000);    
+    calculated_parameter[45].value = gas_consumption;
+    calculated_parameter[46].value = gas_consumption_cumul_day;
   }  
   else {    
     epoch_previous = t_of_day;

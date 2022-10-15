@@ -142,8 +142,8 @@ struct calculated {
 calculated calculated_parameter[] = {
   {0,"energy_consumption_calc_kWh",0.0,'y'},
   {1,"energy_production_calc_kWh",0.0,'y'},
-  {2,"energy_consumption_calc_cumul_day_kWh",0.0,'y'},
-  {3,"energy_production_calc_cumul_day_kWh",0.0,'y'},
+  {2,"energy_consumption_calc_cumul_day_Wh",0.0,'y'},
+  {3,"energy_production_calc_cumul_day_Wh",0.0,'y'},
   {4,"power_consumption_calc_from_energy_W",0.0,'y'},
   {5,"power_production_calc_from_energy_W",0.0,'y'},
   {6,"power_consumption_calc_W",0.0,'y'},
@@ -185,4 +185,7 @@ calculated calculated_parameter[] = {
   {42,"power_excess_solar_l1_calc_W",0.0,'y'},
   {43,"power_excess_solar_l2_calc_W",0.0,'y'},
   {44,"power_excess_solar_l3_calc_W",0.0,'y'}
+  {45,"gas_consumption_calc_m3",0.0,'y'},
+  {46,"gas_consumption_calc_cumul_day_m3",0.0,'y'},
+
 };

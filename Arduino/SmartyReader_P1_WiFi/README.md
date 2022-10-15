@@ -105,9 +105,9 @@ If your solar plant is giving you 6&#8239;kW on 3 phases (L1, L2, L3), you get 2
 
 `act_pwr_imp_p_plus_l1` (21.7.0) = 2&#8239;kW
 
-`act_pwr_imp_p_plus_l2"` (41.7.0) = 0&#8239;kW
+`act_pwr_imp_p_plus_l2` (41.7.0) = 0&#8239;kW
 
-`act_pwr_imp_p_plus_l3"` (61.7.0) = 0&#8239;kW
+`act_pwr_imp_p_plus_l3` (61.7.0) = 0&#8239;kW
 
 `act_pwr_exp_p_minus_l1` (22.7.0) = 0&#8239;kW
 
