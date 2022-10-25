@@ -5,7 +5,7 @@ const char *MY_WIFI_SSID = "your_ssid";
 const char *MY_WIFI_PASSWORD = "your_password";
 
 /****** SmartyReader Key ******/
-// Key for SAGxxx (16 byte!)
+// Key for SAGxxx (16 byte!) AEBD21B769A6D13C0DF064E383682EFF
 uint8_t KEY_SMARTY[] = {0xAE, 0xBD, 0x21, 0xB7, 0x69, 0xA6, 0xD1, 0x3C,
                         0x0D, 0xF0, 0x64, 0xE3, 0x83, 0x68, 0x2E, 0xFF};
 
@@ -184,7 +184,7 @@ calculated calculated_parameter[] = {
   {41,"power_excess_solar_calc_min_W",0.0,'y'},
   {42,"power_excess_solar_l1_calc_W",0.0,'y'},
   {43,"power_excess_solar_l2_calc_W",0.0,'y'},
-  {44,"power_excess_solar_l3_calc_W",0.0,'y'}
+  {44,"power_excess_solar_l3_calc_W",0.0,'y'},
   {45,"gas_consumption_calc_m3",0.0,'y'},
   {46,"gas_consumption_calc_cumul_day_m3",0.0,'y'},
 
