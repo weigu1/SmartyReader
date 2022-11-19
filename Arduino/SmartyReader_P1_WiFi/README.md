@@ -40,8 +40,6 @@ The main program (.ino) contains still the define lines that can be commented or
 
 + `OTA` will enable the Over The Air update possibility (security risk!). This comes handy to reprogram your SmartyReader while connected to the Smartmeter. In the config file you can change the name you see in the port menu of the Arduino IDE, and the password. To use a minimum of security we calculate an MD5 hash of our password, so that the password is not contained in cleartext in the Flash of the microcontroller. You can calculate MD5 hashes from a password with online tools.
 
-+ `OLD_HARDWARE` must be used for boards before V2.0, because here the serial signal is inverted with hardware (transistor) instead of software.
-
 + `MQTTPASSWORD` enables an MQTT connection protected with a password (recommended!!). Check the config file to set the password.
 
 + `STATIC` can be used if you want a static IP instead of a changing IP. The IP address is set in the config file.
@@ -53,6 +51,10 @@ The main program (.ino) contains still the define lines that can be commented or
 + `GET_NTP_TIME` to add the the real time (from an NTP Server).
 
 + `PUBLISH_COOKED` is used to get only one JSON string with all the calculated values. In this new version every item (DSMR and calculated) is published under its own topic. No more JSON strings but directly the values (easier to handle wit home automation software). In `config.h` (or secrets.h) you can decide with 'y/n' if you want to publish the parameter or not.
+
++ `OLD_HARDWARE` must be used for boards before V2.0, because here the serial signal is inverted with hardware (transistor) instead of software.
+
++ `FUNDUINO_W5100` for Ethernet boards before V2.2 if using Ethernet.
 
 #### The config file (`config.h`). 
 

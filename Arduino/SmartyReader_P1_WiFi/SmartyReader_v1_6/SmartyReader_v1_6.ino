@@ -99,18 +99,21 @@
 
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-//#define USE_SECRETS
-//#define OTA               // if Over The Air update needed (security risk!)
-//#define OLD_HARDWARE    // for the boards before V2.0
-//#define MQTTPASSWORD    // if you want an MQTT connection with password (recommended!!)
-//#define STATIC          // if static IP needed (no DHCP)
-//#define ETHERNET        // if Ethernet with Funduino (W5100) instead of WiFi
-//#define BME280_I2C      // if you want to add a temp sensor to I2C connector
-#define GET_NTP_TIME    // if you need the real time
+#define USE_SECRETS
+//#define OTA                // if Over The Air update needed (security risk!)
+//#define MQTTPASSWORD       // if you want an MQTT connection with password (recommended!!)
+#define STATIC             // if static IP needed (no DHCP)
+#define ETHERNET           // if Ethernet with Funduino (W5100) instead of WiFi
+//#define BME280_I2C         // if you want to add a temp sensor to I2C connector
+#define GET_NTP_TIME       // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
  * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
 //#define PUBLISH_COOKED
+//------------------------
+//#define OLD_HARDWARE      // for the boards before V2.0
+//#define FUNDUINO_W5100    // for the boards before V2.2 if using Ethernet
+
 
 /****** Arduino libraries needed ******/
 #ifdef USE_SECRETS
@@ -228,8 +231,12 @@ void setup() {
   #ifdef STATIC
     Tb.set_static_ip(true,NET_LOCAL_IP, NET_GATEWAY, NET_MASK, NET_DNS);
   #endif // ifdef STATIC
-  #ifdef ETHERNET
-    Tb.set_ethernet(true);
+  #ifdef ETHERNET // only ESP8266 for now
+    #ifdef FUNDUINO_W5100
+      Tb.set_ethernet(true,15); // pin_cs = 15 for W5100
+    #else
+      Tb.set_ethernet(true,0);  // pin_cs = 0 for W5500
+    #endif // ifdef FUNDUINO_W5100
     Tb.init_eth(NET_MAC);
   #else
     Tb.init_wifi_sta(WIFI_SSID, WIFI_PASSWORD, NET_MDNSNAME, NET_HOSTNAME);

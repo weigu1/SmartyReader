@@ -113,6 +113,7 @@ void ESPToolbox::init_wifi_sta(const char *WIFI_SSID, const char *WIFI_PASSWORD,
 
 // initialise ethernet
 void ESPToolbox::init_eth(byte *NET_MAC) {
+  Ethernet.init(pin_cs);
   if (enable_static_ip) {
     // DNS1 = Gateway, DNS2 = net_dns
     Ethernet.begin(NET_MAC, net_local_ip, net_dns, net_gateway, net_mask);
@@ -199,6 +200,11 @@ bool ESPToolbox::get_led_log() {
 // get logger flag for Serial
 bool ESPToolbox::get_serial_log() {
   return ESPToolbox::enable_serial_log;
+}
+
+// get interface number for Serial
+byte ESPToolbox::get_serial_interface_number() {
+  return ESPToolbox::serial_interface_number;
 }
 
 // get logger flag for UDP
@@ -288,37 +294,50 @@ void ESPToolbox::set_led_log(bool flag, byte led_pin, bool pos_logic) {
 
 // set logger flag for Serial
 void ESPToolbox::set_serial_log(bool flag) {
-  ESPToolbox::enable_serial_log = flag;
+  enable_serial_log = flag;
   if (flag) {
-    if (serial_interface_number == 0) { Serial.begin(115200); }
-    if (serial_interface_number == 1) { Serial1.begin(115200); }
-    #ifndef ESP8266  //Serial2 only available on ESP32!
-      if (serial_interface_number == 2) { Serial2.begin(115200); }
-    #endif // ifndef ESP8266
-    delay(500);
-    if (serial_interface_number == 0) { Serial.println("\n\rLogging initialised!"); }
-    if (serial_interface_number == 1) { Serial1.println("\n\rLogging initialised!"); }
-    #ifndef ESP8266  //Serial2 only available on ESP32!
-      if (serial_interface_number == 2) { Serial2.println("\n\rLogging initialised!");}
+    if (serial_interface_number == 0) {
+      Serial.begin(115200);
+      delay(500);
+      Serial.println("\n\rLogging initialised!");
+    }
+    if (serial_interface_number == 1) {
+      Serial1.begin(115200);
+      delay(500);
+      Serial1.println("\n\rLogging initialised!");
+    }
+    #ifndef ESP8266  // Serial2 only available on ESP32!
+      if (serial_interface_number == 2) {
+        Serial2.begin(115200);
+        delay(500);
+        Serial2.println("\n\rLogging initialised!");
+      }
     #endif // ifndef ESP8266
   }
 }
 
 // set serial logger flag and overload to change the serial interface number
 void ESPToolbox::set_serial_log(bool flag, byte interface_number) {
-  ESPToolbox::enable_serial_log = flag;
-  ESPToolbox::serial_interface_number = interface_number;
+  enable_serial_log = flag;
+  serial_interface_number = interface_number;
   if (flag) {
-    if (interface_number == 0) { Serial.begin(115200); }
-    if (interface_number == 1) { Serial1.begin(115200); }
-    #ifndef ESP8266  //Serial2 only available on ESP32!
-      if (interface_number == 2) { Serial2.begin(115200); }
-    #endif // ifndef ESP8266
-    delay(500);
-    if (interface_number == 0) { Serial.println("\n\rLogging initialised!"); }
-    if (interface_number == 1) { Serial1.println("\n\rLogging initialised!"); }
-    #ifndef ESP8266  //Serial2 only available on ESP32!
-      if (interface_number == 2) { Serial2.println("\n\rLogging initialised!");}
+    if (serial_interface_number == 0) {
+      Serial.begin(115200);
+      delay(500);
+      Serial.println("\n\rLogging initialised!");
+    }
+    if (serial_interface_number == 1) {
+      Serial1.begin(115200);
+      delay(500);
+      Serial1.println("\n\rLogging initialised!");
+    }
+
+    #ifndef ESP8266  // Serial2 only available on ESP32!
+      if (serial_interface_number == 2) {
+        Serial2.begin(115200);
+        delay(500);
+        Serial2.println("\n\rLogging initialised!");
+      }
     #endif // ifndef ESP8266
   }
 }
@@ -342,9 +361,10 @@ void ESPToolbox::set_static_ip(bool flag, IPAddress NET_LOCAL_IP,
   ESPToolbox::net_dns = NET_DNS;
 }
 
-// set flag for Ethernet
-void ESPToolbox::set_ethernet(bool flag) {
+// set flag and cs pin for Ethernet
+void ESPToolbox::set_ethernet(bool flag, byte pin_cs) {
   ESPToolbox::enable_ethernet = flag;
+  ESPToolbox::pin_cs = pin_cs;
 }
 
 
@@ -353,12 +373,17 @@ void ESPToolbox::set_ethernet(bool flag) {
 // print log line to Serial and/or remote UDP port
 void ESPToolbox::log(String message) {
   if (ESPToolbox::enable_serial_log) {
-      if (ESPToolbox::serial_interface_number == 0) { Serial.print(message); }
-      if (ESPToolbox::serial_interface_number == 1) { Serial1.print(message); }
+      if (serial_interface_number == 0) {
+        Serial.print(message);
+      }
+      if (serial_interface_number == 1) {
+        Serial1.print(message);
+      }
       #ifndef ESP8266  //Serial2 only available on ESP32!
-        if (ESPToolbox::serial_interface_number == 2) { Serial2.print(message); }
+        if (serial_interface_number == 2) {
+          Serial2.print(message);
+        }
       #endif // ifndef ESP8266
-    //}
   }
   if (ESPToolbox::enable_udp_log) {
     if (enable_ethernet) {
@@ -589,6 +614,33 @@ byte ESPToolbox::non_blocking_delay_x3(unsigned long ms_1, unsigned long ms_2, u
   if(millis_now >= nb_delay_prev_time_3 + ms_3) {
     nb_delay_prev_time_3 += ms_3;
     return 3;
+  }
+  return 0;
+}
+
+// non blocking delay using millis(), returns 1, 2, 3 or 4 if time is up
+byte ESPToolbox::non_blocking_delay_x4(unsigned long ms_1, unsigned long ms_2,
+                                       unsigned long ms_3, unsigned long ms_4) {
+  static unsigned long nb_delay_prev_time_1 = 0;
+  static unsigned long nb_delay_prev_time_2 = 0;
+  static unsigned long nb_delay_prev_time_3 = 0;
+  static unsigned long nb_delay_prev_time_4 = 0;
+  unsigned long millis_now = millis();
+  if(millis_now >= nb_delay_prev_time_1 + ms_1) {
+    nb_delay_prev_time_1 += ms_1;
+    return 1;
+  }
+  if(millis_now >= nb_delay_prev_time_2 + ms_2) {
+    nb_delay_prev_time_2 += ms_2;
+    return 2;
+  }
+  if(millis_now >= nb_delay_prev_time_3 + ms_3) {
+    nb_delay_prev_time_3 += ms_3;
+    return 3;
+  }
+    if(millis_now >= nb_delay_prev_time_4 + ms_4) {
+    nb_delay_prev_time_4 += ms_4;
+    return 4;
   }
   return 0;
 }

@@ -93,13 +93,14 @@ class ESPToolbox {
       void init_http_server();
     #endif //ifdef WEBSERVER
     /****** GETTER functions **************************************************/
-    bool get_led_log();           // get logger flag for LED
-    bool get_serial_log();        // get logger flag for Serial
-    bool get_udp_log();           // get logger flag for UDP
-    bool get_led_pos_logic();     // LED uses positive logic if true
-    void get_time();              // get the time now
-    bool get_static_ip();         // get flag for static ip
-    bool get_ethernet();          // get flag for static ip
+    bool get_led_log();                 // get logger flag for LED
+    bool get_serial_log();              // get logger flag for Serial
+    byte get_serial_interface_number(); // get interface number for Serial
+    bool get_udp_log();                 // get logger flag for UDP
+    bool get_led_pos_logic();           // LED uses positive logic if true
+    void get_time();                    // get the time now
+    bool get_static_ip();               // get flag for static ip
+    bool get_ethernet();                // get flag for static ip
     /****** SETTER functions **************************************************/
     // set logger flag for Serial (LED_BUILTIN, positive logic)
     void set_led_log(bool flag);
@@ -114,7 +115,7 @@ class ESPToolbox {
     void set_udp_log(bool flag,IPAddress UDP_LOG_PC_IP,const word UDP_LOG_PORT);
     void set_static_ip(bool flag, IPAddress NET_LOCAL_IP, IPAddress NET_GATEWAY,
                        IPAddress NET_MASK, IPAddress NET_DNS);
-    void set_ethernet(bool flag);
+    void set_ethernet(bool flag, byte pin_cs);
 
     /****** LOGGING functions *************************************************/
     // print log line to Serial and/or remote UDP port
@@ -156,6 +157,8 @@ class ESPToolbox {
     byte non_blocking_delay_x2(unsigned long ms_1, unsigned long ms_2);
     // non blocking delay using millis(), returns 1, 2 or 3 if time is up
     byte non_blocking_delay_x3(unsigned long ms_1, unsigned long ms_2, unsigned long ms_3);
+    byte non_blocking_delay_x4(unsigned long ms_1, unsigned long ms_2,
+                               unsigned long ms_3, unsigned long ms_4);
     void log_time_struct(); // log the time structure to serial or UDP
 
   private:
@@ -173,15 +176,11 @@ class ESPToolbox {
     const char *mdns_name = "myESP";
     bool enable_static_ip = false;
     bool enable_ethernet = false;
+    byte pin_cs = 15; // CS pin of Ethernet board
     IPAddress net_local_ip;
     IPAddress net_gateway;
     IPAddress net_mask;
     IPAddress net_dns;
-
-
-
-
-
 
 };
 
