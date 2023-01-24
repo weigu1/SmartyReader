@@ -14,5 +14,5 @@ These smartmeters have a user port that delivers 10 second data (RJ12 connector 
 
 The Smartyreader is a simple board designed with KiCAD and decrypting the smartmeter data with an ESP8266 (Lolin D1 mini pro). The data is then published over MQTT via WiFi or Ethernet. A new version allows also to use LoRa or LoRaWAN.
 
-For infos from the newest software look here: <https://github.com/weigu1/SmartyReader/tree/main/Arduino/SmartyReader_P1_WiFi>.
+For infos from the newest software look here: <https://github.com/weigu1/SmartyReader/tree/main/Arduino/SmartyReader_P1_WiFi_Ethernet>.
 

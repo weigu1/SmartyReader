@@ -15,7 +15,7 @@ We need a the following libraries:
 + `Crypto` (Rhys Wheatherley)
 + `PubSubClient`  (by Nick O'Leary)
 + `ArduinoJson` (Benoit Blanchon)
-+ `circular Buffer` (Roberto Lo Giacco)
++ `circular Buffer` (AgileWare, Roberto Lo Giacco)
 + `BME280` (Tyler Glenn); only if you use a BME280! 
 
 To install them go to `Tools > Manage Libraries...`. Type in the search field the name of the library, choose it and install it. Sometimes you have to scroll down to find the right lib.

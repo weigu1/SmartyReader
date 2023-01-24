@@ -88,6 +88,14 @@
   SD2(9)  | TCK(13)                |---|              TD0(15) | SD1(8)
   CMD(11) | SD3(10)                |---|              SD0(7)  | CLK(6)
 
+  We need a the following libraries:
+
+  + `Crypto` (Rhys Wheatherley)
+  + `PubSubClient`  (by Nick O'Leary)
+  + `ArduinoJson` (Benoit Blanchon)
+  + `circular Buffer` (AgileWare, Roberto Lo Giacco)
+  + `BME280` (Tyler Glenn); only if you use a BME280! 
+
 */
 
 /*!!!!!!!!!! make your changes in config.h (or secrets.h) !!!!!!!!!*/
@@ -100,16 +108,16 @@
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
 #define USE_SECRETS
-//#define OTA                // if Over The Air update needed (security risk!)
+#define OTA                // if Over The Air update needed (security risk!)
 //#define MQTTPASSWORD       // if you want an MQTT connection with password (recommended!!)
 #define STATIC             // if static IP needed (no DHCP)
-#define ETHERNET           // if Ethernet with Funduino (W5100) instead of WiFi
+//#define ETHERNET           // if Ethernet with Funduino (W5100) instead of WiFi
 //#define BME280_I2C         // if you want to add a temp sensor to I2C connector
 #define GET_NTP_TIME       // if you need the real time
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
  * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
-//#define PUBLISH_COOKED
+#define PUBLISH_COOKED
 //------------------------
 //#define OLD_HARDWARE      // for the boards before V2.0
 //#define FUNDUINO_W5100    // for the boards before V2.2 if using Ethernet
@@ -117,7 +125,7 @@
 
 /****** Arduino libraries needed ******/
 #ifdef USE_SECRETS
-  #include <secrets.h>
+  #include <secrets_1.h>
 #else  
   #include "config.h"      // most of the things you need to change are here
 #endif // USE_SECRETS  
@@ -455,9 +463,9 @@ void read_telegram() {
     }
     serial_cnt++;
   }
-  if (serial_cnt > 500) {
+  if (serial_cnt > 500) { // here for 
     serial_data_length = serial_cnt;
-  }
+  }  
 }
 
 
@@ -665,8 +673,8 @@ void decrypt_and_calculate(int samples) {
   }
 }
 
-void init_vector(Vector_GCM *vect, const char *Vect_name, uint8_t *key_SM, uint8_t *auth_data) {
-  vect->name = Vect_name;  // vector name    
+void init_vector(Vector_GCM *vect, const char *vect_name, uint8_t *key_SM, uint8_t *auth_data) {
+  vect->name = vect_name;  // vector name    
   for (int i = 0; i < 16; i++) {
     vect->key[i] = key_SM[i];
   }
