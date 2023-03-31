@@ -107,10 +107,10 @@
 
 /* The file "secrets.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-#define USE_SECRETS
-#define OTA                // if Over The Air update needed (security risk!)
+//#define USE_SECRETS
+//#define OTA                // if Over The Air update needed (security risk!)
 //#define MQTTPASSWORD       // if you want an MQTT connection with password (recommended!!)
-#define STATIC             // if static IP needed (no DHCP)
+//#define STATIC             // if static IP needed (no DHCP)
 //#define ETHERNET           // if Ethernet with Funduino (W5100) instead of WiFi
 //#define BME280_I2C         // if you want to add a temp sensor to I2C connector
 #define GET_NTP_TIME       // if you need the real time
@@ -263,6 +263,9 @@ void setup() {
   #ifdef BME280_I2C
     init_bme280();     
   #endif
+  #ifdef OLD_HARDWARE
+    digitalWrite(DATA_REQUEST_SM,LOW);   // set request line to 5V
+  #endif // OLD_HARDWARE
   delay(2000); // give it some time
   Tb.blink_led_x_times(3);
 }
@@ -277,7 +280,6 @@ void loop() {
   if ((telegram[0] == 0xdb) && (telegram[1] != 0) && (telegram[2] != 0)) {  //valid telegram
     decrypt_and_calculate(SAMPLES);    
     if (Tb.non_blocking_delay(PUBLISH_TIME)) { // Publish every PUBLISH_TIME
-      Tb.log("HuHu");
       #ifdef PUBLISH_COOKED        
         mqtt_publish_cooked();
       #else
@@ -446,15 +448,9 @@ void mqtt_publish_cooked() {
 
 void read_telegram() {
   uint16_t serial_cnt = 0;  
-  #ifdef OLD_HARDWARE
-    digitalWrite(DATA_REQUEST_SM,LOW);   // set request line to 5V    
-  #endif // OLD_HARDWARE
   if (Serial.available()) {   // wait for the whole stream
     delay(500);
-    }  
-  #ifdef OLD_HARDWARE
-    digitalWrite(DATA_REQUEST_SM,HIGH);  // x*86,8µs (1024 uint8_t need 88ms)
-  #endif // OLD_HARDWARE
+  }
   while ((Serial.available()) && (serial_cnt < MAX_SERIAL_STREAM_LENGTH)) {
     telegram[serial_cnt] = Serial.read();
     if (telegram[0] != 0xDB) {      
@@ -659,9 +655,9 @@ void calculate_energy_and_power(int samples) {
 void decrypt_and_calculate(int samples) {
   Tb.log_ln("-----------------------------------");
   Tb.log_ln("Decrypt and calculate");
-  print_raw_data(serial_data_length);  // for thorough debugging
+  //print_raw_data(serial_data_length);  // for thorough debugging
   init_vector(&Vector_SM,"Vector_SM", KEY_SMARTY, AUTH_DATA);
-  print_vector(&Vector_SM);            // for thorough debugging    
+  //print_vector(&Vector_SM);            // for thorough debugging
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
     parse_dsmr_string(buffer);  
