@@ -117,7 +117,7 @@
 /* everything item (DSMR and calculated) is normally published under its own topic
  * in config.h (or secrets.h) you can decide with 'y/n' if you want to publish it
  * PUBLISH_COOKED is a JSON String with the calculated values (needed by me :))*/
-#define PUBLISH_COOKED
+//#define PUBLISH_COOKED
 //------------------------
 //#define OLD_HARDWARE      // for the boards before V2.0
 //#define FUNDUINO_W5100    // for the boards before V2.2 if using Ethernet
@@ -125,7 +125,7 @@
 
 /****** Arduino libraries needed ******/
 #ifdef USE_SECRETS
-  #include <secrets_1.h>
+  #include <secrets.h>
 #else  
   #include "config.h"      // most of the things you need to change are here
 #endif // USE_SECRETS  
@@ -659,9 +659,9 @@ void calculate_energy_and_power(int samples) {
 void decrypt_and_calculate(int samples) {
   Tb.log_ln("-----------------------------------");
   Tb.log_ln("Decrypt and calculate");
-  //print_raw_data(serial_data_length);  // for thorough debugging
+  print_raw_data(serial_data_length);  // for thorough debugging
   init_vector(&Vector_SM,"Vector_SM", KEY_SMARTY, AUTH_DATA);
-  //print_vector(&Vector_SM);            // for thorough debugging    
+  print_vector(&Vector_SM);            // for thorough debugging    
   if (Vector_SM.datasize != MAX_SERIAL_STREAM_LENGTH) {
     decrypt_text(&Vector_SM);
     parse_dsmr_string(buffer);  
