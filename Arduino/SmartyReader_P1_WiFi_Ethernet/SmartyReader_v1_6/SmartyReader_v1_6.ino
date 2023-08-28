@@ -236,9 +236,6 @@ void setup() {
   #ifdef STATIC
     Tb.set_static_ip(true,NET_LOCAL_IP, NET_GATEWAY, NET_MASK, NET_DNS);
   #endif // ifdef STATIC
-  #ifdef STATIC
-    Tb.set_static_ip(true,NET_LOCAL_IP, NET_GATEWAY, NET_MASK, NET_DNS);
-  #endif // ifdef STATIC
   #ifdef ETHERNET // only ESP8266 for now
     #ifdef FUNDUINO_W5100
       Tb.set_ethernet(true,15); // pin_cs = 15 for W5100
