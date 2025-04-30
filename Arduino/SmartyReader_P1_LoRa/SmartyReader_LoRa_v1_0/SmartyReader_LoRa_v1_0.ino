@@ -70,8 +70,8 @@
 const long PUBLISH_TIME = 60000;
 
 // Comment or uncomment the following lines suiting your needs
-//#define LORA_P2P        // LORA_P2P
-#define LORAWAN         // LORAWAN with TTN
+#define LORA_P2P        // LORA_P2P
+//#define LORAWAN         // LORAWAN with TTN
 
 #include "SmartyReader.h"
 #include <SPI.h>

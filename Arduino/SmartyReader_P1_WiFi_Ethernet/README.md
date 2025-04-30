@@ -1,12 +1,12 @@
 # SmartyReader: Reading encrypted Luxembourgish smartmeter data
 
-## The Software (MQTT via WiFi) to use with an ESP8266
+## The Software (MQTT via WiFi or Ethernet) to use with an ESP8266
 
 ### Install Arduino and the libraries needed:
 
 The newer software uses my ESPToolbox lib, that is included in the sketch folder.
 
-First install the newest Arduino IDE (1.8.19). To use our ESP8266 LOLIN/WEMOS we add this line ```http://arduino.esp8266.com/stable/package_esp8266com_index.json``` to ```File-Preferences-Additional_Boards_Manager_URLs:```.
+First install the newest Arduino IDE. To use our ESP8266 LOLIN/WEMOS we add this line ```http://arduino.esp8266.com/stable/package_esp8266com_index.json``` to ```File-Preferences-Additional_Boards_Manager_URLs:```.
 
 Then we install support for ESP8266 boards by going to `Tools > Board: > Boards Manager...`. In the Manager window we type **esp8266** in the search field, select esp8266 and click on `install`. Close the window and choose the board `LOLIN/WEMOS D1 mini Pro` under `Tools > Board:` (you have to scroll).
 
@@ -21,6 +21,14 @@ We need a the following libraries:
 To install them go to `Tools > Manage Libraries...`. Type in the search field the name of the library, choose it and install it. Sometimes you have to scroll down to find the right lib.
 
 If you want to use the config `config.h` file uncomment `SECRETS`. If you want to use the a secret config file, create a folder named `Secrets` in the sketchbook libraries folder (`sketchbook/libraries`). Now copy the content of `config.h` to a file named `secrets.h`. Place this file in the `Secrets` folder.
+
+### Version 1.7
+
+Since january first 2025 the costs for the electricity net in Luxembourg include, in addition to the fixed costs, a new calculation that takes power classes into account (3&#8239;kW, 7&#8239;kW, 12&#8239;kW ...). You are assigned to such a power class and have to pay more if your consumption exceeds it.
+
+The new software version calculates this data if required. In addition, thanks to Markus Schoellauf, an MQTT discovery method for Home Assistant has been integrated.
+
+These two changes have not yet been thoroughly tested. If you find an error, please let us know.
 
 ### Version 1.6
 
