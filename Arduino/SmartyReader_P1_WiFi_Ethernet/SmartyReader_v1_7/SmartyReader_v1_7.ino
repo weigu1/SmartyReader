@@ -610,7 +610,7 @@ void calculate_energy_and_power(int samples) {
     // calculate energy exceeding class power for samples (default 15 min.)
     for (byte i=0; i<sizeof(class_kW); i++) {   
       energy_Ws_exceed_class_10s[i] = 0.0;
-      if (power_production > class_kW[i]*1000) {
+      if (power_consumption > class_kW[i]*1000) {
         energy_Ws_exceed_class_10s[i] = (power_consumption-(class_kW[i]*1000))*10;        
       }            
     }

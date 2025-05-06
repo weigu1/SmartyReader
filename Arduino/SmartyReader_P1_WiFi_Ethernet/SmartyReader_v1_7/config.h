@@ -32,7 +32,7 @@ const char *MY_MQTT_PASS = "meagain";
 const char *NET_MDNSNAME = "smartyReader";      // optional (access with SmartyReaderLAM.local)
 const char *NET_HOSTNAME = "smartyReader";      // optional
 const word UDP_LOG_PORT = 6666;                    // UDP logging settings if enabled in setup()
-const byte UDP_LOG_PC_IP_BYTES[4] = {192, 168, 1, 50};
+const byte UDP_LOG_PC_IP_BYTES[4] = {192, 168, 128, 70};
 const char *NTP_SERVER = "lu.pool.ntp.org"; // NTP settings
 // your time zone (https://remotemonitoringsystems.ca/time-zone-abbreviations.php)
 const char *TZ_INFO    = "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00";
