@@ -20,6 +20,7 @@
                   added Ethernet, bugfixes
   V1.7 2025-04-30 Added calculated values for exceeding power classes
                   Added discovery function Home Assistant (Markus Schöllauf)
+                  MQTT will and birth (Jean-Marie Quintus)
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
 
@@ -113,6 +114,7 @@
 #define MY_SECRETS_FILE <secrets_smartmeter_main.h>
 //#define OTA                // if Over The Air update needed (security risk!)
 //#define MQTTPASSWORD       // if you want an MQTT connection with password (recommended!!)
+//#define MQTT_WILL_BIRTH    // if you want an MQTT will
 //#define STATIC             // if static IP needed (no DHCP)
 //#define ETHERNET           // if Ethernet (W5500) instead of WiFi
 //#define BME280_I2C         // if you want to add a temp sensor to I2C connector
@@ -317,11 +319,23 @@ void mqtt_connect() {
   while (!MQTT_Client.connected()) { // Loop until we're reconnected
     Tb.log("Attempting MQTT connection...");
     #ifdef MQTTPASSWORD
-      if (MQTT_Client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {
+      #ifdef MQTT_WILL_BIRTH
+        if (MQTT_Client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS , WILL_TOPIC, WILL_QOS, WILL_RETAIN, WILL_MESSAGE)) {
+      #else
+        if (MQTT_Client.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS)) {  
+      #endif // ifdef MQTT_WILL_BIRTH
     #else  
-      if (MQTT_Client.connect(MQTT_CLIENT_ID)) { // Attempt to connect
+      #ifdef MQTT_WILL_BIRTH
+        if (MQTT_Client.connect(MQTT_CLIENT_ID , WILL_TOPIC, WILL_QOS, WILL_RETAIN, WILL_MESSAGE)) { // Attempt to connect
+      #else
+        if (MQTT_Client.connect(MQTT_CLIENT_ID)) { // Attempt to connect
+      #endif // ifdef MQTT_WILL_BIRTH
+
     #endif // ifdef MQTTPASSWORD
       Tb.log_ln("MQTT connected");
+      #ifdef MQTT_WILL_BIRTH
+        MQTT_Client.publish(BIRTH_TOPIC, BIRTH_MESSAGE, BIRTH_RETAIN);
+      #endif // ifdef MQTT_WILL_BIRTH  
       // Once connected, publish an announcement...
       //MQTT_Client.publish(MQTT_TOPIC_OUT, "{\"dt\":\"connected\"}");
       // don't because OpenHAB does not like this ...

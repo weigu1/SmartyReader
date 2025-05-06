@@ -27,6 +27,21 @@ const short MY_MQTT_PORT = 1883; // or 8883
 // only if you use MQTTPASSWORD (uncomment //#define MQTTPASSWORD in ino file)
 const char *MY_MQTT_USER = "me";
 const char *MY_MQTT_PASS = "meagain";
+// will
+const int WILL_QOS = 1;
+const char* WILL_TOPIC = "mywill/lastwill/onlinestatus";
+const char* WILL_MESSAGE = "0";
+const boolean WILL_RETAIN = false;
+//birth
+const char* BIRTH_TOPIC = "mywill/lastwill/onlinestatus";
+const char* BIRTH_MESSAGE = "1";
+const boolean BIRTH_RETAIN = false;
+
+
+
+
+
+
 
 /****** WiFi and network settings ******/
 const char *NET_MDNSNAME = "smartyReader";      // optional (access with SmartyReaderLAM.local)

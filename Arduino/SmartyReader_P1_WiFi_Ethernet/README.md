@@ -26,7 +26,7 @@ If you want to use the config `config.h` file uncomment `SECRETS`. If you want t
 
 Since january first 2025 the costs for the electricity net in Luxembourg include, in addition to the fixed costs, a new calculation that takes power classes into account (3&#8239;kW, 7&#8239;kW, 12&#8239;kW ...). You are assigned to such a power class and have to pay more if your consumption exceeds it.
 
-The new software version calculates this data if required. In addition, thanks to Markus Schoellauf, an MQTT discovery method for Home Assistant has been integrated.
+The new software version calculates this data if required. In addition, thanks to Markus Schoellauf, an MQTT discovery method for Home Assistant has been integrated. We also now have a last will :) thanks to Jean-Marie Quintus.
 
 These two changes have not yet been thoroughly tested. If you find an error, please let us know.
 
