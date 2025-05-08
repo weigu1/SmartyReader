@@ -510,11 +510,15 @@ void calculate_energy_and_power(int samples) {
   double power_production_l2_calc_mean = 0.0, power_production_l2_calc_max = 0.0, power_production_l2_calc_min = 50000.0;
   double power_production_l3_calc_mean = 0.0, power_production_l3_calc_max = 0.0, power_production_l3_calc_min = 50000.0;
   static unsigned long epoch_previous = 0;
-  static double power_consumption_sum = 0.0, power_consumption_l1_sum = 0.0, power_consumption_l2_sum = 0.0, power_consumption_l3_sum = 0.0;
-  static double power_production_sum = 0.0, power_production_l1_sum = 0.0, power_production_l2_sum = 0.0, power_production_l3_sum = 0.0;
+  static double power_consumption_sum = 0.0, power_consumption_l1_sum = 0.0,
+                power_consumption_l2_sum = 0.0, power_consumption_l3_sum = 0.0;
+  static double power_production_sum = 0.0, power_production_l1_sum = 0.0,
+                power_production_l2_sum = 0.0, power_production_l3_sum = 0.0;
   static double power_excess_solar_sum = 0.0;
-  static double energy_consumption_previous = dsmr[4].value.toDouble()*1000.0;
-  static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
+  //static double energy_consumption_previous = dsmr[4].value.toDouble()*1000.0;
+  //static double energy_production_previous = dsmr[5].value.toDouble()*1000.0;
+  static double energy_consumption_previous_1min = dsmr[4].value.toDouble()*1000.0;
+  static double energy_production_previous_1min = dsmr[5].value.toDouble()*1000.0;
   static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
   static double energy_production_midnight = dsmr[5].value.toDouble()*1000.0;  
   static double gas_consumption_midnight = dsmr[50].value.toDouble();  
@@ -550,8 +554,10 @@ void calculate_energy_and_power(int samples) {
     power_production_l3 = dsmr[35].value.toDouble()*1000.0; 
     gas_consumption = dsmr[50].value.toDouble();
     // calculate power_from_energy, cumul day and excess power       
-    power_consumption_calc_from_energy = (energy_consumption-energy_consumption_previous)*3600/delta_time;
-    power_production_calc_from_energy = (energy_production-energy_production_previous)*3600/delta_time;
+    //power_consumption_calc_from_energy = (energy_consumption-energy_consumption_previous)*3600/delta_time;
+    //power_production_calc_from_energy = (energy_production-energy_production_previous)*3600/delta_time;
+    power_consumption_calc_from_energy = (energy_consumption-energy_consumption_previous_1min)*3600/60;
+    power_production_calc_from_energy = (energy_production-energy_production_previous_1min)*3600/60;
     energy_consumption_cumul_day = energy_consumption - energy_consumption_midnight;
     energy_production_cumul_day = energy_production - energy_production_midnight;    
     gas_consumption_cumul_day = gas_consumption - gas_consumption_midnight;    
@@ -661,8 +667,12 @@ void calculate_energy_and_power(int samples) {
         energy_kWh_exceed_class_month[i] = 0.0;
       }        
     }
-    energy_consumption_previous = energy_consumption;
-    energy_production_previous = energy_production;
+    //energy_consumption_previous = energy_consumption;    
+    //energy_production_previous = energy_production;
+    if (time_counter%60 == 0) {// 1min (power_from_energy)
+      energy_consumption_previous_1min = energy_consumption;
+      energy_production_previous_1min = energy_production;
+    }  
     calculated_parameter[0].value = energy_consumption/1000.0; 
     calculated_parameter[1].value = energy_production/1000.0;    
     calculated_parameter[2].value = constrain(energy_consumption_cumul_day,0,100000);
