@@ -21,6 +21,7 @@
   V1.7 2025-04-30 Added calculated values for exceeding power classes
                   Added discovery function Home Assistant (Markus Schöllauf)
                   MQTT will and birth (Jean-Marie Quintus)
+       2025-05-28 Added money calculation
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
 
@@ -521,13 +522,14 @@ void calculate_energy_and_power(int samples) {
   static double energy_production_previous_1min = dsmr[5].value.toDouble()*1000.0;
   static double energy_consumption_midnight = dsmr[4].value.toDouble()*1000.0;
   static double energy_production_midnight = dsmr[5].value.toDouble()*1000.0;  
-  static double gas_consumption_midnight = dsmr[50].value.toDouble();  
-  byte class_kW[] = {3,7,12};
-  double energy_Ws_exceed_class_10s[] = {0.0,0.0,0.0}; // 3kW, 7kW, 12kW
-  static double energy_Ws_exceed_class_sum[] = {0.0,0.0,0.0}; // 3kW, 7kW, 12kW  
-  static double energy_Wh_exceed_class_15min[] = {0.0,0.0,0.0}; // 3kW, 7kW, 12kW
-  static double energy_kWh_exceed_class_day[] = {0.0,0.0,0.0}; // 3kW, 7kW, 12kW
-  static double energy_kWh_exceed_class_month[] = {0.0,0.0,0.0}; // 3kW, 7kW, 12kW
+  static double gas_consumption_midnight = dsmr[50].value.toDouble();    
+  double energy_Ws_exceed_class_10s[] = {0.0,0.0,0.0}; // default 3kW, 7kW, 12kW (config!)
+  static double energy_Ws_exceed_class_sum[] = {0.0,0.0,0.0};
+  static double energy_Wh_exceed_class_15min[] = {0.0,0.0,0.0};
+  static double energy_kWh_exceed_class_day[] = {0.0,0.0,0.0};
+  static double energy_kWh_exceed_class_month[] = {0.0,0.0,0.0};
+  double money_euro_exceed_class_day[] = {0.0,0.0,0.0};
+  double money_euro_exceed_class_month[] = {0.0,0.0,0.0};
   // get the time of the day
   t.tm_year = dsmr[2].value.substring(0,4).toInt()-1900;
   t.tm_mon = dsmr[2].value.substring(5,7).toInt();
@@ -643,11 +645,12 @@ void calculate_energy_and_power(int samples) {
     }    
     Tb.log_ln(String(time_counter%900));
     if ((time_counter%900 <= 9) || (time_counter%900 >= 891)) { // 15 min = 15*6*10s      
-      for (byte i=0; i<sizeof(class_kW); i++) {        
+      for (byte i=0; i<sizeof(class_kW); i++) {
         energy_Ws_exceed_class_sum[i] = 0.0;
-        energy_kWh_exceed_class_day[i] += (round((energy_Wh_exceed_class_15min[i]*100)/1000))/100;
+        energy_kWh_exceed_class_day[i] += round((energy_Wh_exceed_class_15min[i]*100)/1000)/100;
       }  
     }
+
     if ((t.tm_hour == 23) && (t.tm_min >= 58) && (midnight_flag == false)) {
       energy_consumption_midnight = energy_consumption;
       energy_production_midnight = energy_production;
@@ -666,6 +669,13 @@ void calculate_energy_and_power(int samples) {
       for (byte i=0; i<sizeof(class_kW); i++) {
         energy_kWh_exceed_class_month[i] = 0.0;
       }        
+    }
+    // calculate exceed money
+    for (byte i=0; i<sizeof(class_kW); i++) {
+      money_euro_exceed_class_day[i] = round(energy_kWh_exceed_class_day[i]*exceed_money_per_kWh[i]*100)/100;
+    }
+    for (byte i=0; i<sizeof(class_kW); i++) {
+      money_euro_exceed_class_month[i] = round(energy_kWh_exceed_class_month[i]*exceed_money_per_kWh[i]*100)/100;
     }
     //energy_consumption_previous = energy_consumption;    
     //energy_production_previous = energy_production;
@@ -723,12 +733,18 @@ void calculate_energy_and_power(int samples) {
     calculated_parameter[47].value = energy_Wh_exceed_class_15min[0];
     calculated_parameter[48].value = energy_Wh_exceed_class_15min[1];
     calculated_parameter[49].value = energy_Wh_exceed_class_15min[2];
-    calculated_parameter[50].value = energy_kWh_exceed_class_day[0];
+    calculated_parameter[50].value = energy_kWh_exceed_class_day[0];    
     calculated_parameter[51].value = energy_kWh_exceed_class_day[1];
     calculated_parameter[52].value = energy_kWh_exceed_class_day[2];
-    calculated_parameter[53].value = energy_kWh_exceed_class_month[0];
-    calculated_parameter[54].value = energy_kWh_exceed_class_month[1];
-    calculated_parameter[55].value = energy_kWh_exceed_class_month[2];
+    calculated_parameter[53].value = money_euro_exceed_class_day[0];
+    calculated_parameter[54].value = money_euro_exceed_class_day[1];
+    calculated_parameter[55].value = money_euro_exceed_class_day[2];
+    calculated_parameter[56].value = energy_kWh_exceed_class_month[0];
+    calculated_parameter[57].value = energy_kWh_exceed_class_month[1];
+    calculated_parameter[58].value = energy_kWh_exceed_class_month[2];
+    calculated_parameter[59].value = money_euro_exceed_class_month[0];
+    calculated_parameter[60].value = money_euro_exceed_class_month[1];
+    calculated_parameter[61].value = money_euro_exceed_class_month[2];
   }  
   else {    
     epoch_previous = t_of_day;    
