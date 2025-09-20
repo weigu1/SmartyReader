@@ -28,7 +28,7 @@ Since january first 2025 the costs for the electricity net in Luxembourg include
 
 The new software version calculates this data if required. In addition, thanks to Markus Schoellauf, an MQTT discovery method for Home Assistant has been integrated. We also now have a last will :) thanks to Jean-Marie Quintus.
 
-These two changes have not yet been thoroughly tested. If you find an error, please let us know.
+These two changes have not yet been thoroughly tested. If you find an error, please let me know.
 
 ### Version 1.6
 

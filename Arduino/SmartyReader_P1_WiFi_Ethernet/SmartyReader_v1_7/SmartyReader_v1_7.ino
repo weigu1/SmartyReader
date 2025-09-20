@@ -1,5 +1,5 @@
 /*
-  SmartyReader_1_6.ino
+  SmartyReader_1_7.ino
 
   Read P1 port from Luxemburgian smartmeter.
   Decode and publish with MQTT over Wifi or Ethernet
@@ -21,7 +21,7 @@
   V1.7 2025-04-30 Added calculated values for exceeding power classes
                   Added discovery function Home Assistant (Markus Schöllauf)
                   MQTT will and birth (Jean-Marie Quintus)
-       2025-05-28 Added money calculation
+       2025-05-28 Added money calculation for exceeding power
   ---------------------------------------------------------------------------
   Copyright (C) 2017 Guy WEILER www.weigu.lu
 
@@ -111,8 +111,8 @@
 
 /* The file "secrets_xxx.h" has to be placed in the sketchbook libraries folder
    in a folder named "Secrets" and must contain the same things than the file config.h*/
-//#define USE_SECRETS
 #define MY_SECRETS_FILE <secrets_smartmeter_main.h>
+//#define USE_SECRETS
 //#define OTA                // if Over The Air update needed (security risk!)
 //#define MQTTPASSWORD       // if you want an MQTT connection with password (recommended!!)
 //#define MQTT_WILL_BIRTH    // if you want an MQTT will
