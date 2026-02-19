@@ -7,7 +7,7 @@
 + Good to know:<br>
 1. To program the D1 mini pro, remove it from the socket!
 2. If you buy today D1 mini pro's you get often cloned boards. Select in Arduino IDE D1 mini (clone)!
-3. The Ethernet version needs a RESET (button) agter being connected to the Smartmeter to start.
+3. The Ethernet version needs a RESET (button) after being connected to the Smartmeter to start.
 
 The newer software uses my ESPToolbox lib, that is included in the sketch folder.
 
