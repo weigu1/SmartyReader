@@ -4,6 +4,11 @@
 
 ### Install Arduino and the libraries needed:
 
++ Good to know:<br><br>
+1. To program the D1 mini pro, remove it from the socket!
+2. If you buy today D1 mini pro's you get often cloned boards. Select in Arduino IDE D1 mini (clone)!
+3. The Ethernet version needs a RESET (button) agter being connected to the Smartmeter to start.
+
 The newer software uses my ESPToolbox lib, that is included in the sketch folder.
 
 First install the newest Arduino IDE. To use our ESP8266 LOLIN/WEMOS we add this line ```http://arduino.esp8266.com/stable/package_esp8266com_index.json``` to ```File-Preferences-Additional_Boards_Manager_URLs:```.
